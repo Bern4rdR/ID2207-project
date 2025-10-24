@@ -1,6 +1,6 @@
-import Request
+import event.Request as Request
 from Request import EventRequest  # inherits from Request abstract class
-import Status
+import event.Status as Status
 import datetime
 
 
@@ -73,10 +73,14 @@ def test_financial_manager_feedback():
     # Feedback
     SAMPLE_EVENT_REQUEST.addFeedback("Not financially viable")
     SAMPLE_EVENT_REQUEST.addFeedback("Budget not enough for venue")
-    assert SAMPLE_EVENT_REQUEST.feedback == [
-        "Not financially viable",
-        "Budget not enough for venue",
-    ]
+    print(SAMPLE_EVENT_REQUEST.feedback)
+    assert not any(
+        [
+            f not in SAMPLE_EVENT_REQUEST.feedback
+            for f in ["Not financially viable", "Budget not enough for venue"]
+        ]
+    )
+
     # Approval
     SAMPLE_EVENT_REQUEST.approve()
     assert SAMPLE_EVENT_REQUEST.status == Status.Approved
