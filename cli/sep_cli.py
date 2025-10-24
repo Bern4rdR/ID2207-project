@@ -1,6 +1,7 @@
 import cmd2
 from cmd2 import Cmd
 import getpass
+from message.message import LoginMessage
 
 # Example user database (replace with real logic)
 USERS = {
@@ -12,8 +13,10 @@ class SepCli(Cmd):
     intro = "Welcome to the application. Type 'login' to begin or '?' for options.\n"
     prompt = "(not logged in) > "
 
-    def __init__(self):
+    def __init__(self, outMsgQueue, inMsgQueue):
         super().__init__()
+        self._outMsgQueue = outMsgQueue
+        self._inMsgQueue = inMsgQueue
         self.logged_in_user = None
 
     #
@@ -28,7 +31,12 @@ class SepCli(Cmd):
         username = self.prompt_for_username()
         password = self.prompt_for_password()
 
-        if self.authenticate(username, password):
+        self._outMsgQueue.put(LoginMessage(username, password))
+        self.poutput(f"Login with {username} :: {password}")
+        # we could make this async eventually, but I got lazy
+        result = self._inMsgQueue.get()
+        self.poutput(f"result: {result.success}")
+        if result.success:
             self.logged_in_user = username
             self.prompt = f"({self.logged_in_user}) > "
             self.poutput(f"✅ Login successful. Welcome, {username}!")

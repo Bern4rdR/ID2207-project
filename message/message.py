@@ -7,8 +7,15 @@ class StopMessage(Message):
 
 class LoginMessage(Message):
     _username = ""
-    password = ""
+    _password = ""
 
     def __init__(self, username, password):
         self._username = username
         self._password = password
+
+class LoginResultMessage(Message):
+    success = False
+    role = ""
+    def __init__(self, success, role):
+        self.success = success
+        self.role = role
