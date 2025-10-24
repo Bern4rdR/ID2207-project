@@ -5,8 +5,8 @@ class LoginManager:
         self._filename = filename
         with open(filename, 'r') as f:
             for line in f.readlines():
-                user = line.split(",")[0]
-                password = line.split(",")[1]
+                user = line.split(",")[0].strip()
+                password = line.split(",")[1].strip()
                 self._users[user] = password
 
     def login(self, username='', password=''):

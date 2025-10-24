@@ -16,7 +16,7 @@ def test_login_empty():
 def test_login_correct():
     lm = LoginManager()
     success = lm.login("vivienne", "password")
-    assert not success
+    assert success
 
 def test_login_wrong_username():
     lm = LoginManager()
