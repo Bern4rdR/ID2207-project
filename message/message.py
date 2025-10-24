@@ -1,6 +1,9 @@
 
 class Message:
     name = ""
+    role = "user"
+    def setRole(self, role):
+        self.role = role
 
 class StopMessage(Message):
     name="stop"
