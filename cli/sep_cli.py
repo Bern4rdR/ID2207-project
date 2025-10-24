@@ -1,8 +1,8 @@
 import cmd2
 from cmd2 import Cmd
 import getpass
-from message.message import LoginMessage, NewEventMessage, ViewEventMessage, DecideEventMessage
-
+from message.message import LoginMessage, LoginResultMessage, NewEventMessage, ViewEventMessage, DecideEventMessage, StopMessage
+from threading import Thread
 
 class SepCli(Cmd):
     intro = "Welcome to the SEP Management Application. Type 'login' to begin or '?' for options.\n"
@@ -29,14 +29,6 @@ class SepCli(Cmd):
 
         self._outMsgQueue.put(LoginMessage(username, password))
         # we could make this async eventually, but I got lazy
-        result = self._inMsgQueue.get()
-        if result.success:
-            self.logged_in_user = username
-            self.role = result.role
-            self.prompt = f"({self.logged_in_user} : {self.role}) > "
-            self.poutput(f"✅ Login successful. Welcome, {username}!")
-        else:
-            self.poutput("❌ Invalid username or password.")
 
     #
     # PROTECTED COMMAND EXAMPLE
@@ -68,9 +60,6 @@ class SepCli(Cmd):
     def prompt_for_password(self):
         # getpass masks input
         return getpass.getpass("Password: ")
-
-    def authenticate(self, username, password):
-        return USERS.get(username) == password
 
     def require_login(self):
         if not self.logged_in_user:
@@ -138,7 +127,36 @@ class SepCli(Cmd):
         self.poutput("Exiting…")
         return True
 
+    def event_thread(self):
+        while True:
+            msg = self._inMsgQueue.get()
+            if type(msg) == LoginResultMessage:
+                result = self._inMsgQueue.get()
+                if result.success:
+                    self.logged_in_user = result.user
+                    self.role = result.role
+                    self.prompt = f"({self.logged_in_user} : {self.role}) > "
+                    self.poutput(f"✅ Login successful. Welcome, {result.user}!")
+                else:
+                    self.poutput("❌ Invalid username or password.")
+            elif type(msg) == StopMessage:
+                break
+            elif type(msg) == NewEventMessage:
+                self.current_event = msg
+                self.show_event()
+
+    def run_ui(self):
+        eventT = Thread(target = self.event_thread)
+        eventT.start()
+        self.cmdloop()
+        # clean exit
+        self._inMsgQueue.put(StopMessage()) # stop thread, got lazy
+        eventT.join()
 
 if __name__ == "__main__":
     cli = SepCli()
+    eventT = Thread(target = cli.event_thread)
     cli.cmdloop()
+    # clean exit
+    cli._inMsgQueue.put(StopMessage()) # stop thread, got lazy
+    eventT.join()
