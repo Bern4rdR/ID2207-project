@@ -1,0 +1,3 @@
+vivienne,password,admin
+bernard,password,user
+jan,password,admin
