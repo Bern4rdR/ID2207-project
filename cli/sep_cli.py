@@ -1,17 +1,13 @@
 import cmd2
 from cmd2 import Cmd
 import getpass
-from message.message import LoginMessage
+from message.message import LoginMessage, NewEventMessage, ViewEventMessage, DecideEventMessage
 
-# Example user database (replace with real logic)
-USERS = {
-    "alice": "password123",
-    "bob": "secret"
-}
 
 class SepCli(Cmd):
-    intro = "Welcome to the application. Type 'login' to begin or '?' for options.\n"
+    intro = "Welcome to the SEP Management Application. Type 'login' to begin or '?' for options.\n"
     prompt = "(not logged in) > "
+    current_event = None
 
     def __init__(self, outMsgQueue, inMsgQueue):
         super().__init__()
@@ -32,13 +28,12 @@ class SepCli(Cmd):
         password = self.prompt_for_password()
 
         self._outMsgQueue.put(LoginMessage(username, password))
-        self.poutput(f"Login with {username} :: {password}")
         # we could make this async eventually, but I got lazy
         result = self._inMsgQueue.get()
-        self.poutput(f"result: {result.success}")
         if result.success:
             self.logged_in_user = username
-            self.prompt = f"({self.logged_in_user}) > "
+            self.role = result.role
+            self.prompt = f"({self.logged_in_user} : {self.role}) > "
             self.poutput(f"✅ Login successful. Welcome, {username}!")
         else:
             self.poutput("❌ Invalid username or password.")
@@ -82,6 +77,58 @@ class SepCli(Cmd):
             self.poutput("❗ You must be logged in to perform this command. Use 'login'.")
             return False
         return True
+
+    # Event Functions
+    def do_newEvent(self, arg):
+        if not self.require_login():
+            return
+        e_name = self.read_input("Event Name: ")
+        e_desc = self.read_input("Event Description: ")
+        e_budget = self.read_input("Budget: ")
+        self._outMsgQueue.put(NewEventMessage(e_name, e_desc, e_budget))
+        self.current_event = NewEventMessage(e_name, e_desc, e_budget)
+
+    def do_viewEvent(self, arg):
+        if not self.require_login():
+            return
+        e_name = self.read_input("Event Name: ")
+        self._outMsgQueue.put(ViewEventMessage(e_name, "", ""))
+
+    def eventFeedback(self, approve, name):
+        self._outMsgQueue.put(DecideEventMessage(name, "", "", self.role, approve))
+
+    def do_approveEvent(self, arg):
+        if not self.require_login():
+            return
+        e_name = self.read_input("Event Name you wish to approve: ")
+        self.eventFeedback(True, e_name)
+
+    def do_rejectEvent(self, arg):
+        if not self.require_login():
+            return
+        e_name = self.read_input("Event Name you wish to reject: ")
+        self.eventFeedback(False, e_name)
+    
+    def do_show(self, args):
+        self.show_event()
+
+    def show_event(self):
+        """
+        Display the currently created event in a formatted structure.
+        """
+        if not self.current_event:
+            self.perror("No event created yet. Use 'create_event' first.")
+            return
+
+        event = self.current_event
+        self.poutput("\n===== EVENT DETAILS =====")
+        self.poutput(f"Name:        {event.name}")
+        self.poutput(f"Budget:      {event.budget}")
+        self.poutput(f"Description:\n{event.description if event.description else '(no description)'}")
+        # don't have these in the event yet - should we add?
+        # approved_by_display = ", ".join(event.ApprovedBy) if event.ApprovedBy else "(nobody yet)"
+        # self.poutput(f"Approved By: {approved_by_display}")
+        self.poutput("=========================\n")
 
     #
     # EXIT
