@@ -49,6 +49,7 @@ class SepCli(Cmd):
             return
         self.poutput(f"Goodbye, {self.logged_in_user}")
         self.logged_in_user = None
+        self.role = None
         self.prompt = "(not logged in) > "
 
     #
@@ -130,8 +131,9 @@ class SepCli(Cmd):
     def event_thread(self):
         while True:
             msg = self._inMsgQueue.get()
+            print(f"New message {msg}")
             if type(msg) == LoginResultMessage:
-                result = self._inMsgQueue.get()
+                result = msg
                 if result.success:
                     self.logged_in_user = result.user
                     self.role = result.role
