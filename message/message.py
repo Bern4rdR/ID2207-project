@@ -21,9 +21,11 @@ class LoginMessage(Message):
 class LoginResultMessage(Message):
     success = False
     role = ""
-    def __init__(self, success, role):
+    user = ""
+    def __init__(self, success, role, user):
         self.success = success
         self.role = role
+        self.user = user
 
 """
 @Bernard, since you wrote the event class please look over these and change them however you want. We could just have it hold an event 
