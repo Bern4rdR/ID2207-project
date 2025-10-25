@@ -133,3 +133,22 @@ def test_add_task_to_event():
     te = Task(name="testtask")
     se.add_task(te)
     assert te in se.tasks()
+
+def test_add_budget_comment():
+    te = Task(name="testtask")
+    assert te.last_comment == ""
+    te.add_budget_comment("this is reasonable")
+    assert te.last_comment != ""
+
+def test_multiple_coments():
+    te = Task(name="testtask")
+    te.add_budget_comment("this is reasonable")
+    te.add_budget_comment("the cake costs too much though")
+    assert len(te.comments) == 2
+
+def task_approval():
+    te = Task("unapproved")
+    t2 = Task("approved")
+    t2.approve()
+    assert not te.approved()
+    assert t2.approved()
