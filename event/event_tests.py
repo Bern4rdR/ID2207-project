@@ -1,8 +1,8 @@
 import event.Request as Request
-from Request import EventRequest  # inherits from Request abstract class
+from Request import EventRequest  # inherits from Request abstract class # lmao there is no request abstract class
 import event.Status as Status
 import datetime
-
+from event.models import Event, Task
 
 SAMPLE_EVENT_REQUEST = EventRequest(
     type="Conference",
@@ -99,3 +99,37 @@ def test_admin_manager_desicion():
     # Final Rejection
     SAMPLE_EVENT_REQUEST.close()
     assert SAMPLE_EVENT_REQUEST.status == Status.Closed
+
+
+# adding tests for an event class
+def test_init_event():
+    se = Event(name="testevent")
+    assert se != None
+    assert se.name == "testevent"
+
+def test_update_event():
+    se = Event(name="testevent")
+    se.budget = 1000
+    se.description = "this is a test"
+    assert se.budget == 1000
+    assert se.description == "this is a test"
+
+def test_init_task():
+    te = Task(name="testtask")
+    assert te != None
+    assert te.name == "testtask"
+
+def test_update_task():
+    te = Task(name="testtask")
+    te.budget = 10
+    te.description = "test desc"
+    te.assignee = "bob"
+    assert te.budget == 10
+    assert te.description == "test desc"
+    assert te.assignee == "bob"
+
+def test_add_task_to_event():
+    se = Event(name="testevent")
+    te = Task(name="testtask")
+    se.add_task(te)
+    assert te in se.tasks()
