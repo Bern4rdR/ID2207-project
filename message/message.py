@@ -29,11 +29,14 @@ class LoginResultMessage(Message):
         self.role = role
         self.user = user
 
-"""
-@Bernard, since you wrote the event class please look over these and change them however you want. We could just have it hold an event 
-instead of the event details. Then the CLI has to do event validation, which is fine. 
-It is probably better if it just holds an event, with some message specific metadata (like role and user who just sent an approval or whatever)
-"""
+class ViewAllRequestMessage(Message):
+    pass
+
+class RequestListMessage(Message):
+    requests = []
+    def __init__(self, names):
+        self.requests = names
+
 class EventMessage(Message):
     event: Event
     def __init__(self, ev: Event):

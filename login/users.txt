@@ -1,3 +1,3 @@
-vivienne,password,admin
-bernard,password,user
-jan,password,admin
+vivienne,password,ADMIN
+bernard,password,CSRM
+jan,password,FinMan

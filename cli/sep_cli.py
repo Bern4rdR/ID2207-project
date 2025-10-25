@@ -4,7 +4,7 @@ import getpass
 import datetime
 from message.message import (
     LoginMessage, LoginResultMessage, NewEventMessage, ViewEventMessage,
-    DecideEventMessage, StopMessage
+    DecideEventMessage, StopMessage, ViewAllRequestMessage, RequestListMessage
 )
 from threading import Thread
 from event.Request import EventRequest  # ✅ import Request object
@@ -21,6 +21,12 @@ class SepCli(Cmd):
         self.logged_in_user = None
         self.role = None
         self.requests = []  # ✅ local Request list
+
+        self.disabled_cmds = [
+            'alias', 'edit', 'run_script', 'macro', 'shell', 'run_pyscript',
+            'py', 'shortcuts', 'history', 'load', 'save', 'set', 'settable'
+        ]
+        self.hidden_commands.extend(self.disabled_cmds)
 
     # LOGIN
     def do_login(self, arg):
@@ -77,7 +83,7 @@ class SepCli(Cmd):
             except Exception as e:
                 self.perror(f"Incorrect date format")
 
-        req = EventRequest(type=e_name, budget=e_budget, dates=[e_date])
+        req = EventRequest(name=e_name, type=e_desc, budget=e_budget, dates=[e_date])
         self.requests.append(req) # not sure if we need this but maybe
         self.poutput(f"✅ Request created: {req.id}")
         self._outMsgQueue.put(NewEventMessage(req))
@@ -105,12 +111,8 @@ class SepCli(Cmd):
         """List all created Requests."""
         if not self.require_login():
             return
-        if not self.requests:
-            self.poutput("No requests created yet.")
-            return
-        for req in self.requests:
-            self.poutput(f"- {req.type} ({req.id}) [{req.status}]")
-
+        self._outMsgQueue.put(ViewAllRequestMessage())
+        
     # ✅ NEW: Stub - list requests to approve
     def do_listPendingApprovals(self, arg):
         """List requests pending your approval (stub)."""
@@ -125,12 +127,37 @@ class SepCli(Cmd):
             self.hidden_commands = ['newEvent', 'viewRequest', 'listRequests', 'listPendingApprovals']
             return
 
-        if self.role == "Admin":
+        if self.role != "user":
             self.hidden_commands = []  # admin sees everything
         elif self.role == "Manager":
             self.hidden_commands = ['approveEvent']  # example restriction
         else:
             self.hidden_commands = ['listPendingApprovals']
+        self.hidden_commands.extend(self.disabled_cmds)
+
+    def show_event(self):
+        """
+        Display the currently created event in a formatted structure.
+        """
+        if not self.current_event:
+            self.perror("No event created yet. Use 'create_event' first.")
+            return
+
+        event = self.current_event
+        self.poutput("\n===== EVENT DETAILS =====")
+        self.poutput(f"Name:        {event.name}")
+        self.poutput(f"Budget:      {event.budget}")
+        self.poutput(f"Description:\n{event.type if event.type else '(no description)'}")
+        # don't have these in the event yet - should we add?
+        # approved_by_display = ", ".join(event.ApprovedBy) if event.ApprovedBy else "(nobody yet)"
+        # self.poutput(f"Approved By: {approved_by_display}")
+        self.poutput("=========================\n")
+
+    def show_list(self, things, prompt):
+        self.poutput(prompt)
+        for thing in things:
+            self.poutput(thing)
+
 
     # EVENT HANDLING (existing)
     def event_thread(self):
@@ -152,6 +179,8 @@ class SepCli(Cmd):
             elif isinstance(msg, NewEventMessage):
                 self.current_event = msg
                 self.show_event()
+            elif isinstance(msg, RequestListMessage):
+                self.show_list(msg.requests, "Request Names:")
 
     def run_ui(self):
         eventT = Thread(target=self.event_thread)

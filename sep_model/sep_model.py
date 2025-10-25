@@ -1,5 +1,5 @@
 import pickle
-from message.message import Message, LoginMessage, StopMessage, LoginResultMessage, NewEventMessage, ViewEventMessage, DecideEventMessage
+from message.message import Message, LoginMessage, StopMessage, LoginResultMessage, NewEventMessage, ViewEventMessage, DecideEventMessage, ViewAllRequestMessage, RequestListMessage
 from login.login_manager import LoginManager
 from multiprocessing import Queue
 # this defines the main backend loop and data structure
@@ -31,9 +31,8 @@ class SepModel:
             self._tasks = []
             self._events = []
 
+    # call and response
     def loop(self):
-        # for user in self._lm._users.keys():
-        #     print(user)
         while(True):
             next_msg = self._bgMsgQueue.get()
             if type(next_msg) == LoginMessage:
@@ -49,9 +48,11 @@ class SepModel:
                 ev = [x for x in self._events if x.name == next_msg.name]
                 if len(ev):
                     self._outputQueue.put(ev[0])
+            elif type(next_msg) == ViewAllRequestMessage:
+                names = [x.name for x in self._events]
+                self._outputQueue.put(RequestListMessage(names))
             elif type(next_msg) == Message:
                 print(f"Message received with Type Message {next_msg.name}")
-            # base case - all messages are type message
             else:
                 print(f"Message received without type detected {next_msg.name}")
     
