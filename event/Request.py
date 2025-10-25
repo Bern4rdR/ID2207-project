@@ -20,6 +20,7 @@ import sys
 import uuid
 import datetime
 from typing import Any, List, Optional
+from hr.crew_request import Role
 
 # Prefer relative import of the package's Status. Fall back to a lightweight
 # local stand-in if Status cannot be imported (keeps imports safe in isolation).
@@ -62,7 +63,9 @@ class EventRequest:
     - dates: list[datetime.datetime] (future dates)
     - preferences: list[str] (optional)
     """
-
+    _approved_csr = False
+    _approved_fin = False
+    _approved_admin = False
     def __init__(
         self,
         name: str,
@@ -102,7 +105,19 @@ class EventRequest:
             raise ValueError("budget must be a number >= 0")
 
         # Initial status (tests expect Status.Ongoing)
-        self.status = getattr(Status, "Ongoing", Status.Ongoing)
+        self.status = getattr(Status, "Ongoing", Status.Ongoing) #not using status anymore
+
+    @property
+    def awaiting_CSR(self):
+        return not self._approved_csr
+
+    @property
+    def awaiting_fin(self):
+        return (self._approved_csr and not self._approved_fin)
+
+    @property
+    def awaiting_admin(self):
+        return (self._approved_csr and self._approved_fin and not self._approved_admin)
 
     def addFeedback(self, message: str) -> None:
         """Append a feedback message."""
@@ -110,9 +125,15 @@ class EventRequest:
             return
         self.feedback.append(message)
 
-    def approve(self) -> None:
+    def approve(self, role=None) -> None:
         """Mark request as approved."""
         self.status = getattr(Status, "Approved", Status.Approved)
+        if role == Role.CSR:
+            self._approved_csr = True
+        elif role == Role.Fin:
+            self._approved_fin = True
+        elif role == Role.Admin:
+            self._approved_admin = True
 
     def reject(self, reason: Optional[str] = None) -> None:
         """

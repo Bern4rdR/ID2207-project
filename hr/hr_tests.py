@@ -1,4 +1,4 @@
-from hr.crew_request import CrewRequest, Department
+from hr.crew_request import CrewRequest, Department, Role
 
 def test_create_hr():
     hr = CrewRequest("test request")
@@ -32,3 +32,9 @@ def test_hr_approve():
     hr.approve()
     assert hr.approved
     assert not h2.approved
+
+def test_role():
+    rr = Role(1)
+    assert rr == Role.CSR
+    rr = Role(4)
+    assert rr == Role.Admin

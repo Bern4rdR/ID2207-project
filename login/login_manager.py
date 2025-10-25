@@ -1,4 +1,5 @@
 from message.message import Message
+from hr.crew_request import Role
 # adding role counts as a refactor
 class LoginManager:
     _users = {}
@@ -8,7 +9,7 @@ class LoginManager:
             for line in f.readlines():
                 user = line.split(",")[0].strip()
                 password = line.split(",")[1].strip()
-                role = line.split(",")[2].strip()
+                role = Role(int(line.split(",")[2].strip()))
                 self._users[user] = {'pw': password, 'role': role}
 
     def login(self, username='', password=''):

@@ -3,6 +3,7 @@ from Request import EventRequest  # inherits from Request abstract class # lmao 
 import event.Status as Status
 import datetime
 from event.models import Event, Task
+from hr.crew_request import Role
 
 SAMPLE_EVENT_REQUEST = EventRequest(
     name="test",
@@ -40,6 +41,31 @@ def test_initiate_event_request():
     # Fields validation
     assert not any([d < datetime.datetime.now() for d in request.dates])
     assert request.budget >= 0
+
+def test_approval():
+    request = EventRequest(
+        name="test",
+        type="Conference",
+        budget=100,
+        dates=[datetime.datetime.now() + datetime.timedelta(days=1)],
+        preferences=["Quiet", "Enough room for 10 people"],
+    )
+    assert request.awaiting_CSR
+    assert not request.awaiting_fin
+    assert not request.awaiting_admin
+    request.approve(Role.CSR)
+    assert not request.awaiting_CSR
+    assert request.awaiting_fin
+    assert not request.awaiting_admin
+    request.approve(Role.Fin)
+    assert not request.awaiting_CSR
+    assert not request.awaiting_fin
+    assert request.awaiting_admin
+    request.approve(Role.Admin)
+    assert not request.awaiting_CSR
+    assert not request.awaiting_fin
+    assert not request.awaiting_admin
+
 
 
 def test_view_event_request():

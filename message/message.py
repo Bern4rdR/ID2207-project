@@ -39,28 +39,44 @@ class RequestListMessage(Message):
 
 class EventMessage(Message):
     event: Event
+    name: str
     def __init__(self, ev: Event):
         self.event = ev
+        self.name = ev.name
 
 class NewEventMessage(Message):
     request: EventRequest
+    name: str
     def __init__(self, er: EventRequest):
         self.request = er
+        self.name = er.name
 
 class ViewEventMessage(Message):
     def __init__(self, name):
         self.name = name
 
-class ApproveRequestMessage(NewEventMessage):
+class ApproveRequestMessage(Message):
     approve: bool
-    def __init__(self, er: EventRequest, approved: bool):
-        super.__init__(er)
+    def __init__(self, name: str, role, approved: bool):
         self.approve = approved
+        self.name = name
+        self.role = role
 
-class DecideEventMessage(EventMessage):
+class DecideEventMessage(NewEventMessage):
     role = None
     decision = None
     def __init__(self, name, descripton, budget, role, decision):
         super.__init__(name, descripton, budget)
         self.role = role
         self.decision = decision
+
+class RequestApprovedMessage(Message):
+    def __init__(self, name):
+        self.name = name
+
+class RequestRejectedMessage(RequestApprovedMessage):
+    pass
+
+class FindWaitingRequestMessage(Message):
+    def __init__(self, role):
+        self.role = role

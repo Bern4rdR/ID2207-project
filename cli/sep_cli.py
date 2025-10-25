@@ -2,9 +2,11 @@ import cmd2
 from cmd2 import Cmd
 import getpass
 import datetime
+# this did get a bit ridiculous... oops
 from message.message import (
     LoginMessage, LoginResultMessage, NewEventMessage, ViewEventMessage,
-    DecideEventMessage, StopMessage, ViewAllRequestMessage, RequestListMessage
+    DecideEventMessage, StopMessage, ViewAllRequestMessage, RequestListMessage,
+    RequestApprovedMessage, RequestRejectedMessage, ApproveRequestMessage, FindWaitingRequestMessage
 )
 from threading import Thread
 from event.Request import EventRequest  # ✅ import Request object
@@ -71,7 +73,12 @@ class SepCli(Cmd):
 
         e_name = self.read_input("Event Name: ")
         e_desc = self.read_input("Event Description: ")
-        e_budget = float(self.read_input("Budget: "))
+        while True:
+            try:
+                e_budget = float(self.read_input("Budget: "))
+                break
+            except:
+                self.perror("Budget must be a number > 0")
 
         # make a Request object
         e_date = None
@@ -118,7 +125,15 @@ class SepCli(Cmd):
         """List requests pending your approval (stub)."""
         if not self.require_login():
             return
-        self.poutput("🧩 This feature is not yet implemented (stub).")
+        self._outMsgQueue.put(FindWaitingRequestMessage(self.role))
+
+    def do_approve(self, arg):
+        e_name = arg
+        if not e_name or e_name == "":
+            self.poutput("Require event name to approve")
+            return
+        self.poutput(f"Event name: {e_name}")
+        self._outMsgQueue.put(ApproveRequestMessage(e_name, self.role, True))
 
     # ROLE-BASED COMMAND CONTROL
     def update_available_commands(self):
@@ -135,7 +150,7 @@ class SepCli(Cmd):
             self.hidden_commands = ['listPendingApprovals']
         self.hidden_commands.extend(self.disabled_cmds)
 
-    def show_event(self):
+    def show_event_request(self):
         """
         Display the currently created event in a formatted structure.
         """
@@ -158,12 +173,16 @@ class SepCli(Cmd):
         for thing in things:
             self.poutput(thing)
 
+    def show_approved(self, msg):
+        self.poutput(f"Event: {msg.name} approved!")
+
+    def show_rejected(self, msg):
+        self.poutput(f"Event: {msg.name} rejected!")
 
     # EVENT HANDLING (existing)
     def event_thread(self):
         while True:
             msg = self._inMsgQueue.get()
-            print(f"New message {msg}")
             if isinstance(msg, LoginResultMessage):
                 result = msg
                 if result.success:
@@ -178,9 +197,13 @@ class SepCli(Cmd):
                 break
             elif isinstance(msg, NewEventMessage):
                 self.current_event = msg
-                self.show_event()
+                self.show_event_request()
             elif isinstance(msg, RequestListMessage):
                 self.show_list(msg.requests, "Request Names:")
+            elif isinstance(msg, RequestApprovedMessage):
+                self.show_approved(msg)
+            elif isinstance(msg, RequestRejectedMessage):
+                self.show_rejected(msg)
 
     def run_ui(self):
         eventT = Thread(target=self.event_thread)
