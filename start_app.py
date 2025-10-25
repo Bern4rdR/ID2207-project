@@ -1,12 +1,11 @@
 from cli.sep_cli import SepCli
-from login.login_manager import LoginManager
 from multiprocessing import Process, Queue
-from message.message import Message, LoginMessage, StopMessage, LoginResultMessage, NewEventMessage, ViewEventMessage, DecideEventMessage
+from message.message import StopMessage
 from sep_model.sep_model import run_model
 
 
 if __name__ == "__main__":
-    print("Start SEP Management Application")
+    print("SEP Management Application Booting...")
     # interprocess comms
     model_input_queue = Queue()
     model_output_queue = Queue()
