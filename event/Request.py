@@ -65,6 +65,7 @@ class EventRequest:
 
     def __init__(
         self,
+        name: str,
         type: str,
         budget: float,
         dates: List[datetime.datetime],
@@ -72,6 +73,7 @@ class EventRequest:
     ) -> None:
         # Unique identifier
         self.id: str = uuid.uuid4().hex
+        self.name = name
 
         # Core fields
         self.type: str = type

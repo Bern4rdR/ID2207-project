@@ -44,7 +44,7 @@ class SepModel:
                 self.save_on_exit()
                 break
             elif type(next_msg) == NewEventMessage:
-                self._events.append(next_msg)
+                self._events.append(next_msg.request)
             elif type(next_msg) == ViewEventMessage:
                 ev = [x for x in self._events if x.name == next_msg.name]
                 if len(ev):

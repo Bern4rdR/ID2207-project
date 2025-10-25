@@ -5,6 +5,7 @@ import datetime
 from event.models import Event, Task
 
 SAMPLE_EVENT_REQUEST = EventRequest(
+    name="test",
     type="Conference",
     budget=100,
     dates=[datetime.datetime.now() + datetime.timedelta(days=1)],
@@ -18,6 +19,7 @@ def test_initiate_event_request():
     # TODO: Valid credentials
 
     request = EventRequest(
+        name="test",
         type="Conference",
         budget=100,
         dates=[datetime.datetime.now() + datetime.timedelta(days=1)],
@@ -27,6 +29,7 @@ def test_initiate_event_request():
     # Required fields
     assert request.id is not None
     assert request.status == Status.Ongoing
+    assert request.name == "test"
     assert request.type == "Conference"
     assert request.budget == 100
     assert request.feedback == []

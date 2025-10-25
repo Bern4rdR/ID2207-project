@@ -1,8 +1,13 @@
 import cmd2
 from cmd2 import Cmd
 import getpass
-from message.message import LoginMessage, LoginResultMessage, NewEventMessage, ViewEventMessage, DecideEventMessage, StopMessage
+import datetime
+from message.message import (
+    LoginMessage, LoginResultMessage, NewEventMessage, ViewEventMessage,
+    DecideEventMessage, StopMessage
+)
 from threading import Thread
+from event.Request import EventRequest  # ✅ import Request object
 
 class SepCli(Cmd):
     intro = "Welcome to the SEP Management Application. Type 'login' to begin or '?' for options.\n"
@@ -14,10 +19,10 @@ class SepCli(Cmd):
         self._outMsgQueue = outMsgQueue
         self._inMsgQueue = inMsgQueue
         self.logged_in_user = None
+        self.role = None
+        self.requests = []  # ✅ local Request list
 
-    #
-    # LOGIN command
-    #
+    # LOGIN
     def do_login(self, arg):
         """Login with a username and password."""
         if self.logged_in_user:
@@ -28,20 +33,7 @@ class SepCli(Cmd):
         password = self.prompt_for_password()
 
         self._outMsgQueue.put(LoginMessage(username, password))
-        # we could make this async eventually, but I got lazy
 
-    #
-    # PROTECTED COMMAND EXAMPLE
-    #
-    def do_secret(self, arg):
-        """Example of a protected command that requires login."""
-        if not self.require_login():
-            return
-        self.poutput("🤫 This is top secret information only for logged-in users!")
-
-    #
-    # LOGOUT
-    #
     def do_logout(self, arg):
         """Logout the current user."""
         if not self.logged_in_user:
@@ -51,15 +43,12 @@ class SepCli(Cmd):
         self.logged_in_user = None
         self.role = None
         self.prompt = "(not logged in) > "
+        self.update_available_commands()  # ✅ reset command availability
 
-    #
-    # HELPER METHODS
-    #
     def prompt_for_username(self):
         return self.read_input("Username: ")
 
     def prompt_for_password(self):
-        # getpass masks input
         return getpass.getpass("Password: ")
 
     def require_login(self):
@@ -68,97 +57,110 @@ class SepCli(Cmd):
             return False
         return True
 
-    # Event Functions
+    # ✅ NEW: Create a Request object when creating an Event
     def do_newEvent(self, arg):
+        """Create a new Event and corresponding Request."""
         if not self.require_login():
             return
+
         e_name = self.read_input("Event Name: ")
         e_desc = self.read_input("Event Description: ")
-        e_budget = self.read_input("Budget: ")
-        self._outMsgQueue.put(NewEventMessage(e_name, e_desc, e_budget))
-        self.current_event = NewEventMessage(e_name, e_desc, e_budget)
+        e_budget = float(self.read_input("Budget: "))
 
-    def do_viewEvent(self, arg):
+        # make a Request object
+        e_date = None
+        while True:
+            try:
+                date_str = self.read_input("Event Date (YYYY-MM-DD): ")
+                e_date = datetime.datetime.strptime(date_str, "%Y-%m-%d")
+                break
+            except Exception as e:
+                self.perror(f"Incorrect date format")
+
+        req = EventRequest(type=e_name, budget=e_budget, dates=[e_date])
+        self.requests.append(req) # not sure if we need this but maybe
+        self.poutput(f"✅ Request created: {req.id}")
+        self._outMsgQueue.put(NewEventMessage(req))
+        self.current_event = req
+
+    # ✅ NEW: View a Request by ID or name
+    def do_viewRequest(self, arg):
+        """View details of a Request by ID or type."""
         if not self.require_login():
             return
-        e_name = self.read_input("Event Name: ")
-        self._outMsgQueue.put(ViewEventMessage(e_name, "", ""))
 
-    def eventFeedback(self, approve, name):
-        self._outMsgQueue.put(DecideEventMessage(name, "", "", self.role, approve))
+        query = self.read_input("Enter Request name").strip()
+        match = None
+        for r in self.requests:
+            if r.id == query or r.type == query:
+                match = r
+                break
+        if match:
+            self.poutput(f"\n{match}\n")
+        else:
+            self.perror("No matching request found.")
 
-    def do_approveEvent(self, arg):
+    # ✅ NEW: List all requests - Todo: Update to work with backend
+    def do_listRequests(self, arg):
+        """List all created Requests."""
         if not self.require_login():
             return
-        e_name = self.read_input("Event Name you wish to approve: ")
-        self.eventFeedback(True, e_name)
+        if not self.requests:
+            self.poutput("No requests created yet.")
+            return
+        for req in self.requests:
+            self.poutput(f"- {req.type} ({req.id}) [{req.status}]")
 
-    def do_rejectEvent(self, arg):
+    # ✅ NEW: Stub - list requests to approve
+    def do_listPendingApprovals(self, arg):
+        """List requests pending your approval (stub)."""
         if not self.require_login():
             return
-        e_name = self.read_input("Event Name you wish to reject: ")
-        self.eventFeedback(False, e_name)
-    
-    def do_show(self, args):
-        self.show_event()
+        self.poutput("🧩 This feature is not yet implemented (stub).")
 
-    def show_event(self):
-        """
-        Display the currently created event in a formatted structure.
-        """
-        if not self.current_event:
-            self.perror("No event created yet. Use 'create_event' first.")
+    # ROLE-BASED COMMAND CONTROL
+    def update_available_commands(self):
+        """Enable/disable commands based on role."""
+        if not self.role:
+            self.hidden_commands = ['newEvent', 'viewRequest', 'listRequests', 'listPendingApprovals']
             return
 
-        event = self.current_event
-        self.poutput("\n===== EVENT DETAILS =====")
-        self.poutput(f"Name:        {event.name}")
-        self.poutput(f"Budget:      {event.budget}")
-        self.poutput(f"Description:\n{event.description if event.description else '(no description)'}")
-        # don't have these in the event yet - should we add?
-        # approved_by_display = ", ".join(event.ApprovedBy) if event.ApprovedBy else "(nobody yet)"
-        # self.poutput(f"Approved By: {approved_by_display}")
-        self.poutput("=========================\n")
+        if self.role == "Admin":
+            self.hidden_commands = []  # admin sees everything
+        elif self.role == "Manager":
+            self.hidden_commands = ['approveEvent']  # example restriction
+        else:
+            self.hidden_commands = ['listPendingApprovals']
 
-    #
-    # EXIT
-    #
-    def do_exit(self, arg):
-        """Exit the program."""
-        self.poutput("Exiting…")
-        return True
-
+    # EVENT HANDLING (existing)
     def event_thread(self):
         while True:
             msg = self._inMsgQueue.get()
             print(f"New message {msg}")
-            if type(msg) == LoginResultMessage:
+            if isinstance(msg, LoginResultMessage):
                 result = msg
                 if result.success:
                     self.logged_in_user = result.user
                     self.role = result.role
                     self.prompt = f"({self.logged_in_user} : {self.role}) > "
+                    self.update_available_commands()  # ✅ apply role
                     self.poutput(f"✅ Login successful. Welcome, {result.user}!")
                 else:
                     self.poutput("❌ Invalid username or password.")
-            elif type(msg) == StopMessage:
+            elif isinstance(msg, StopMessage):
                 break
-            elif type(msg) == NewEventMessage:
+            elif isinstance(msg, NewEventMessage):
                 self.current_event = msg
                 self.show_event()
 
     def run_ui(self):
-        eventT = Thread(target = self.event_thread)
+        eventT = Thread(target=self.event_thread)
         eventT.start()
         self.cmdloop()
-        # clean exit
-        self._inMsgQueue.put(StopMessage()) # stop thread, got lazy
+        self._inMsgQueue.put(StopMessage())
         eventT.join()
 
-if __name__ == "__main__":
-    cli = SepCli()
-    eventT = Thread(target = cli.event_thread)
-    cli.cmdloop()
-    # clean exit
-    cli._inMsgQueue.put(StopMessage()) # stop thread, got lazy
-    eventT.join()
+    def do_exit(self, arg):
+        """Exit the program."""
+        self.poutput("Exiting…")
+        return True

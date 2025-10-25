@@ -1,4 +1,6 @@
 from uuid import uuid4
+from event.Request import EventRequest
+from event.models import Event, Task
 #literally stealing this from the senior engineers at my last job
 # part of the UI, don't need tests
 
@@ -33,20 +35,24 @@ instead of the event details. Then the CLI has to do event validation, which is 
 It is probably better if it just holds an event, with some message specific metadata (like role and user who just sent an approval or whatever)
 """
 class EventMessage(Message):
-    id = None
-    budget = None
-    description = None
-    def __init__(self, name, description, budget):
+    event: Event
+    def __init__(self, ev: Event):
+        self.event = ev
+
+class NewEventMessage(Message):
+    request: EventRequest
+    def __init__(self, er: EventRequest):
+        self.request = er
+
+class ViewEventMessage(Message):
+    def __init__(self, name):
         self.name = name
-        self.id = uuid4()
-        self.description = description
-        self.budget = budget
 
-class NewEventMessage(EventMessage):
-    pass
-
-class ViewEventMessage(EventMessage):
-    pass
+class ApproveRequestMessage(NewEventMessage):
+    approve: bool
+    def __init__(self, er: EventRequest, approved: bool):
+        super.__init__(er)
+        self.approve = approved
 
 class DecideEventMessage(EventMessage):
     role = None
