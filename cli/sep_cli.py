@@ -2,16 +2,32 @@ import cmd2
 from cmd2 import Cmd
 import getpass
 import datetime
+
 # this did get a bit ridiculous... oops
 from message.message import (
-    LoginMessage, LoginResultMessage, NewEventMessage, ViewEventMessage,
-    DecideEventMessage, StopMessage, ViewAllRequestMessage, RequestListMessage,
-    RequestApprovedMessage, RequestRejectedMessage, ApproveRequestMessage, FindWaitingRequestMessage,
-    RequestListMessage, EventListMessage, TaskListMessage, UpdateTaskMessage, PendingListMessage, NewTaskMessage
+    LoginMessage,
+    LoginResultMessage,
+    NewEventMessage,
+    ViewEventMessage,
+    DecideEventMessage,
+    StopMessage,
+    ViewAllRequestMessage,
+    RequestListMessage,
+    RequestApprovedMessage,
+    RequestRejectedMessage,
+    ApproveRequestMessage,
+    FindWaitingRequestMessage,
+    RequestListMessage,
+    EventListMessage,
+    TaskListMessage,
+    UpdateTaskMessage,
+    PendingListMessage,
+    NewTaskMessage,
 )
 from threading import Thread
 from event.Request import EventRequest  # ✅ import Request object
 from event.models import Event, Task
+
 
 class SepCli(Cmd):
     intro = "Welcome to the SEP Management Application. Type 'login' to begin or '?' for options.\n"
@@ -27,8 +43,19 @@ class SepCli(Cmd):
         self.requests = []  # ✅ local Request list
 
         self.disabled_cmds = [
-            'alias', 'edit', 'run_script', 'macro', 'shell', 'run_pyscript',
-            'py', 'shortcuts', 'history', 'load', 'save', 'set', 'settable'
+            "alias",
+            "edit",
+            "run_script",
+            "macro",
+            "shell",
+            "run_pyscript",
+            "py",
+            "shortcuts",
+            "history",
+            "load",
+            "save",
+            "set",
+            "settable",
         ]
         self.hidden_commands.extend(self.disabled_cmds)
 
@@ -63,7 +90,9 @@ class SepCli(Cmd):
 
     def require_login(self):
         if not self.logged_in_user:
-            self.poutput("❗ You must be logged in to perform this command. Use 'login'.")
+            self.poutput(
+                "❗ You must be logged in to perform this command. Use 'login'."
+            )
             return False
         return True
 
@@ -93,7 +122,7 @@ class SepCli(Cmd):
                 self.perror(f"Incorrect date format")
 
         req = EventRequest(name=e_name, type=e_desc, budget=e_budget, dates=[e_date])
-        self.requests.append(req) # not sure if we need this but maybe
+        self.requests.append(req)  # not sure if we need this but maybe
         self.poutput(f"✅ Request created: {req.id}")
         self._outMsgQueue.put(NewEventMessage(req))
         self.current_event = req
@@ -119,7 +148,7 @@ class SepCli(Cmd):
     def do_listRequests(self, arg):
         """List all created Requests."""
         names = [x.name for x in self._requests]
-        self.show_list(names, "Request Names:")        
+        self.show_list(names, "Request Names:")
 
     # ✅ NEW: Stub - list requests to approve
     def do_listPendingApprovals(self, arg):
@@ -179,7 +208,7 @@ class SepCli(Cmd):
 
         nt = Task(t_name, t_budget, t_desc, t_assignee)
         self.current_event.add_task(nt)
-        self._outMsgQueue.put(NewTaskMessage(nt)) # ToDo add message here
+        self._outMsgQueue.put(NewTaskMessage(nt))  # ToDo add message here
         self.poutput(f"✅ Added task '{t_name}' to event '{self.current_event}'.")
 
     # lots of repeated code in these three
@@ -204,7 +233,9 @@ class SepCli(Cmd):
             return
         comment = self.read_input("Comment: ")
         task.add_budget_comment(comment)
-        self._outMsgQueue.put(UpdateTaskMessage(task)) # Todo: task comment message with this task
+        self._outMsgQueue.put(
+            UpdateTaskMessage(task)
+        )  # Todo: task comment message with this task
 
     def do_updateTaskBudget(self, arg):
         """Update a task's budget. Usage: updateTaskBudget <task_name> <new_value>"""
@@ -230,7 +261,7 @@ class SepCli(Cmd):
             self.perror(f"Task {t_name} not found")
             return
         task.budget = new_val
-        self._outMsgQueue.put(UpdateTaskMessage(task)) # ToDo : add message here
+        self._outMsgQueue.put(UpdateTaskMessage(task))  # ToDo : add message here
 
     def do_approveTask(self, arg):
         """Approve a task. Usage: approveTask <task_name>"""
