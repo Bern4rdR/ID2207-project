@@ -135,7 +135,7 @@ class SepCli(Cmd):
 
         query = self.read_input("Enter Request name > ").strip()
         match = None
-        for r in self._requests:
+        for r in self.requests:
             if r.name == query or r.type == query:
                 match = r
                 break
