@@ -1,3 +1,6 @@
-vivienne,password,admin
-bernard,password,user
-jan,password,admin
+vivienne,password,4
+bernard,password,1
+jan,password,3
+alice,password,2
+colt,password,5
+grace,password,6

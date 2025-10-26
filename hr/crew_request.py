@@ -5,6 +5,14 @@ class Department(Enum):
     HR = 2
     Finance = 3
 
+class Role(Enum):
+    CSR = 1
+    HR = 2
+    Fin = 3
+    Admin = 4
+    PSR = 5
+    SSR = 6
+
 class CrewRequest:
     def __init__(self, name, department=None, description="", salary=0, fulltime=True):
         self.name = name

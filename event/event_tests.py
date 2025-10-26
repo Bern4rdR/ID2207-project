@@ -3,8 +3,10 @@ from Request import EventRequest  # inherits from Request abstract class # lmao 
 import event.Status as Status
 import datetime
 from event.models import Event, Task
+from hr.crew_request import Role
 
 SAMPLE_EVENT_REQUEST = EventRequest(
+    name="test",
     type="Conference",
     budget=100,
     dates=[datetime.datetime.now() + datetime.timedelta(days=1)],
@@ -18,6 +20,7 @@ def test_initiate_event_request():
     # TODO: Valid credentials
 
     request = EventRequest(
+        name="test",
         type="Conference",
         budget=100,
         dates=[datetime.datetime.now() + datetime.timedelta(days=1)],
@@ -27,6 +30,7 @@ def test_initiate_event_request():
     # Required fields
     assert request.id is not None
     assert request.status == Status.Ongoing
+    assert request.name == "test"
     assert request.type == "Conference"
     assert request.budget == 100
     assert request.feedback == []
@@ -37,6 +41,31 @@ def test_initiate_event_request():
     # Fields validation
     assert not any([d < datetime.datetime.now() for d in request.dates])
     assert request.budget >= 0
+
+def test_approval():
+    request = EventRequest(
+        name="test",
+        type="Conference",
+        budget=100,
+        dates=[datetime.datetime.now() + datetime.timedelta(days=1)],
+        preferences=["Quiet", "Enough room for 10 people"],
+    )
+    assert request.awaiting_CSR
+    assert not request.awaiting_fin
+    assert not request.awaiting_admin
+    request.approve(Role.CSR)
+    assert not request.awaiting_CSR
+    assert request.awaiting_fin
+    assert not request.awaiting_admin
+    request.approve(Role.Fin)
+    assert not request.awaiting_CSR
+    assert not request.awaiting_fin
+    assert request.awaiting_admin
+    request.approve(Role.Admin)
+    assert not request.awaiting_CSR
+    assert not request.awaiting_fin
+    assert not request.awaiting_admin
+
 
 
 def test_view_event_request():
@@ -118,6 +147,7 @@ def test_init_task():
     te = Task(name="testtask")
     assert te != None
     assert te.name == "testtask"
+    assert not te.approved
 
 def test_update_task():
     te = Task(name="testtask")
@@ -132,7 +162,7 @@ def test_add_task_to_event():
     se = Event(name="testevent")
     te = Task(name="testtask")
     se.add_task(te)
-    assert te in se.tasks()
+    assert te in se.tasks
 
 def test_add_budget_comment():
     te = Task(name="testtask")
