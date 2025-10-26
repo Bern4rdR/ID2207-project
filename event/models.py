@@ -6,12 +6,16 @@ class Event:
         self.budget = budget
         self.description = description
         self._tasks = []
+        self._request = None
 
     def add_task(self, task: "Task"):
         self._tasks.append(task)
 
     def tasks(self):
         return self._tasks
+
+    def add_request(self, request):
+        self._request = request
 
 
 class Task:

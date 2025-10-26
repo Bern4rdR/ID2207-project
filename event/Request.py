@@ -119,6 +119,10 @@ class EventRequest:
     def awaiting_admin(self):
         return (self._approved_csr and self._approved_fin and not self._approved_admin)
 
+    @property
+    def approved(self):
+        return self._approved_admin and self._approved_csr and self._approved_fin
+
     def addFeedback(self, message: str) -> None:
         """Append a feedback message."""
         if message is None:

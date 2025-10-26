@@ -25,7 +25,10 @@ class SepModel:
             pickle.dump(self._tasks, f)
         with open("sep_events.pkl", 'wb') as f:
             f.truncate(0)
-            pickle.dump(self._requests, f)    
+            pickle.dump(self._events, f)    
+        with open("sep_requests.pkl", 'wb') as f:
+            f.truncate(0)
+            pickle.dump(self._requests, f)
 
     def load_on_enter(self):
         # yes this is lazy
@@ -33,6 +36,8 @@ class SepModel:
             with open("sep_tasks.pkl", 'rb') as f:
                 self._tasks = pickle.load(f)
             with open("sep_events.pkl", 'rb') as f:
+                self._events = pickle.load(f)
+            with open("sep_requests.pkl", 'rb') as f:
                 self._requests = pickle.load(f)
         except:
             self._tasks = []
@@ -53,6 +58,19 @@ class SepModel:
         elif msg.role == Role.Admin:
             names = [x.name for x in self._requests if x.awaiting_admin]
         self._outputQueue.put(RequestListMessage(names))
+
+    # do tasks to check model status
+    def admin(self):
+        # check if any events Requests are fully approved
+        req2 = []
+        for i, req in enumerate(self._requests):
+            if req.approved:
+                ev = Event(req.name, req.budget, req.type)
+                ev.add_request(req)
+                self._events.append(ev)
+            else:
+                req2.append(req)
+        self._requests = req2
 
     # call and response
     def loop(self):
@@ -93,6 +111,7 @@ class SepModel:
                     print(f"Model:: Message received without type detected {next_msg.name}")
             except Exception as e:
                 print(f"Error {e}")
+            self.admin()
     
 def run_model(qin, qout):
     model = SepModel(qin, qout)
