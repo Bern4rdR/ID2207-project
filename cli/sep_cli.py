@@ -283,8 +283,7 @@ class SepCli(Cmd):
             self.perror(f"Task {t_name} not found")
             return
         task.approve()
-        self._outMsgQueue.put(UpdateTaskMessage(task)) # add message here
-
+        self._outMsgQueue.put(UpdateTaskMessage(task))  # add message here
 
     """ These are for display purposes and are used by the event loop mostly"""
 
@@ -292,15 +291,20 @@ class SepCli(Cmd):
     def update_available_commands(self):
         """Enable/disable commands based on role."""
         if not self.role:
-            self.hidden_commands = ['newEvent', 'viewRequest', 'listRequests', 'listPendingApprovals']
+            self.hidden_commands = [
+                "newEvent",
+                "viewRequest",
+                "listRequests",
+                "listPendingApprovals",
+            ]
             return
 
         if self.role != "user":
             self.hidden_commands = []  # admin sees everything
         elif self.role == "Manager":
-            self.hidden_commands = ['approveEvent']  # example restriction
+            self.hidden_commands = ["approveEvent"]  # example restriction
         else:
-            self.hidden_commands = ['listPendingApprovals']
+            self.hidden_commands = ["listPendingApprovals"]
         self.hidden_commands.extend(self.disabled_cmds)
 
     def show_event_request(self, event):
@@ -310,7 +314,9 @@ class SepCli(Cmd):
         self.poutput("\n===== EVENT DETAILS =====")
         self.poutput(f"Name:        {event.name}")
         self.poutput(f"Budget:      {event.budget}")
-        self.poutput(f"Description:\n{event.type if event.type else '(no description)'}")
+        self.poutput(
+            f"Description:\n{event.type if event.type else '(no description)'}"
+        )
         # don't have these in the event yet - should we add?
         # approved_by_display = ", ".join(event.ApprovedBy) if event.ApprovedBy else "(nobody yet)"
         # self.poutput(f"Approved By: {approved_by_display}")
@@ -334,21 +340,25 @@ class SepCli(Cmd):
 
     def do_showEvent(self, arg):
         e_name = arg
-        try: 
+        try:
             event = [x for x in self._events if x.name == e_name].pop()
         except:
             self.perror("Event not found")
         self.poutput("\n===== EVENT DETAILS =====")
         self.poutput(f"Name:        {event.name}")
         self.poutput(f"Budget:      {event.budget}")
-        self.poutput(f"Description:\n{event.description if event.description else '(no description)'}")
+        self.poutput(
+            f"Description:\n{event.description if event.description else '(no description)'}"
+        )
         # don't have these in the event yet - should we add?
         # approved_by_display = ", ".join(event.ApprovedBy) if event.ApprovedBy else "(nobody yet)"
         # self.poutput(f"Approved By: {approved_by_display}")
         self.poutput("========= Tasks =========\n")
         for ts in event.tasks:
-            self.poutput(f"Task: {ts.name} :: Budget: {ts.budget} :: {'Approved' if ts.approved else 'Not Approved'}")
- 
+            self.poutput(
+                f"Task: {ts.name} :: Budget: {ts.budget} :: {'Approved' if ts.approved else 'Not Approved'}"
+            )
+
     def do_showTask(self, arg):
         """Approve a task. Usage: approveTask <task_name>"""
         if not self.require_login():
@@ -371,13 +381,13 @@ class SepCli(Cmd):
         self.poutput("\n===== Task DETAILS =====")
         self.poutput(f"Name:        {task.name}")
         self.poutput(f"Budget:      {task.budget}")
-        self.poutput(f"Description:\n{task.description if task.description else '(no description)'}")
+        self.poutput(
+            f"Description:\n{task.description if task.description else '(no description)'}"
+        )
         self.poutput(f"{'Approved' if task.approved else 'Not Approved'}")
         self.poutput("=========== Comments ==========")
         for cm in task.comments:
             self.poutput(cm)
-
-
 
     # EVENT HANDLING (existing)
     def event_thread(self):
@@ -409,7 +419,6 @@ class SepCli(Cmd):
                 self._tasks = msg.tasks
             elif isinstance(msg, PendingListMessage):
                 self.show_list(msg.names, "Pending Requests: ")
-            
 
     def run_ui(self):
         eventT = Thread(target=self.event_thread)
