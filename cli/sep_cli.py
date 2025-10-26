@@ -316,7 +316,7 @@ class SepCli(Cmd):
         # self.poutput(f"Approved By: {approved_by_display}")
         self.poutput("========= Tasks =========\n")
         for ts in event.tasks:
-            self.poutput(f"Task: {ts.name} :: Budget: {ts.budget} :: {"Approved" if ts.approved else "Not Approved"}")
+            self.poutput(f"Task: {ts.name} :: Budget: {ts.budget} :: {'Approved' if ts.approved else 'Not Approved'}")
  
     def do_showTask(self, arg):
         """Approve a task. Usage: approveTask <task_name>"""
@@ -341,7 +341,7 @@ class SepCli(Cmd):
         self.poutput(f"Name:        {task.name}")
         self.poutput(f"Budget:      {task.budget}")
         self.poutput(f"Description:\n{task.description if task.description else '(no description)'}")
-        self.poutput(f"{"Approved" if task.approved else "Not Approved"}")
+        self.poutput(f"{'Approved' if task.approved else 'Not Approved'}")
         self.poutput("=========== Comments ==========")
         for cm in task.comments:
             self.poutput(cm)
