@@ -32,11 +32,6 @@ class LoginResultMessage(Message):
 class ViewAllRequestMessage(Message):
     pass
 
-class RequestListMessage(Message):
-    requests = []
-    def __init__(self, names):
-        self.requests = names
-
 class EventMessage(Message):
     event: Event
     name: str
@@ -80,3 +75,35 @@ class RequestRejectedMessage(RequestApprovedMessage):
 class FindWaitingRequestMessage(Message):
     def __init__(self, role):
         self.role = role
+
+class EventListMessage(Message):
+    events: list[Event]
+    def __init__(self, events):
+        self.events = events
+
+class TaskListMessage(Message):
+    tasks: list[Task]
+    def __init__(self, tasks):
+        self.tasks = tasks
+
+class RequestListMessage(Message):
+    requests: list[EventRequest]
+    def __init__(self, ers):
+        self.requests = ers
+
+# messages to support modifying and creating tasks
+class TaskMessage(Message):
+    task: Task
+    def __init__(self, task):
+        self.task = task
+
+class NewTaskMessage(TaskMessage):
+    pass
+
+class UpdateTaskMessage(TaskMessage):
+    pass
+
+class PendingListMessage(Message):
+    names: list[str]
+    def __init__(self, names):
+        self.names = names

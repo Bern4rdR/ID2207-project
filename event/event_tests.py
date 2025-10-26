@@ -147,6 +147,7 @@ def test_init_task():
     te = Task(name="testtask")
     assert te != None
     assert te.name == "testtask"
+    assert not te.approved
 
 def test_update_task():
     te = Task(name="testtask")
@@ -161,7 +162,7 @@ def test_add_task_to_event():
     se = Event(name="testevent")
     te = Task(name="testtask")
     se.add_task(te)
-    assert te in se.tasks()
+    assert te in se.tasks
 
 def test_add_budget_comment():
     te = Task(name="testtask")

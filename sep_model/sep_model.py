@@ -2,7 +2,9 @@ import pickle
 from message.message import (
     Message, LoginMessage, StopMessage, LoginResultMessage, NewEventMessage, ViewEventMessage, 
     DecideEventMessage, ViewAllRequestMessage, RequestListMessage, ApproveRequestMessage, 
-    RequestApprovedMessage, RequestRejectedMessage, FindWaitingRequestMessage)
+    RequestApprovedMessage, RequestRejectedMessage, FindWaitingRequestMessage, RequestListMessage, EventListMessage,
+    TaskListMessage, UpdateTaskMessage, NewTaskMessage, PendingListMessage
+    )
 from login.login_manager import LoginManager
 from multiprocessing import Queue
 from hr.crew_request import Role
@@ -42,6 +44,9 @@ class SepModel:
         except:
             self._tasks = []
             self._requests = []
+        self._outputQueue.put(RequestListMessage(self._requests))
+        self._outputQueue.put(EventListMessage(self._events))
+        # self._outputQueue.put(TaskListMessage(self._tasks)) # all the tasks are in their events
 
     def find_event(self, name):
         for event in self._requests:
@@ -57,7 +62,23 @@ class SepModel:
             names = [x.name for x in self._requests if x.awaiting_fin]
         elif msg.role == Role.Admin:
             names = [x.name for x in self._requests if x.awaiting_admin]
-        self._outputQueue.put(RequestListMessage(names))
+        self._outputQueue.put(PendingListMessage(names))
+
+    def add_task(self, task: Task):
+        for ev in self._events:
+            if ev._id == task._event_id:
+                ev.add_task(task)
+                self._outputQueue.put(EventListMessage(self._events))
+                return
+
+    def update_task(self, task: Task):
+        for ev in self._events:
+            if ev._id == task._event_id:
+                for i, ts in enumerate(ev.tasks):
+                    if task.name == ts.name:
+                        ev.tasks[i] = task 
+                self._outputQueue.put(EventListMessage(self._events))
+                return
 
     # do tasks to check model status
     def admin(self):
@@ -70,7 +91,11 @@ class SepModel:
                 self._events.append(ev)
             else:
                 req2.append(req)
-        self._requests = req2
+        if len(self._requests) != len(req2): 
+            self._requests = req2
+            self._outputQueue.put(RequestListMessage(self._requests))
+            self._outputQueue.put(EventListMessage(self._events))
+        
 
     # call and response
     def loop(self):
@@ -103,8 +128,11 @@ class SepModel:
                         self._outputQueue.put(RequestRejectedMessage(next_msg.name))
                 elif type(next_msg) == FindWaitingRequestMessage:
                     self.send_waiting_requests(next_msg)
-
-
+                elif type(next_msg) == UpdateTaskMessage:
+                    self.update_task(next_msg.task)
+                elif type(next_msg) == NewTaskMessage:
+                    self.add_task(next_msg.task)
+                # catch generic messages below, seeing those means there is an issue
                 elif type(next_msg) == Message:
                     print(f"Message received with Type Message {next_msg.name}")
                 else:
