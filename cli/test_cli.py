@@ -6,6 +6,7 @@ from threading import Thread
 
 from cli.sep_cli import SepCli
 from message.message import LoginResultMessage, StopMessage
+from hr.crew_request import Role
 
 
 def _tmp_event_thread(cli):
@@ -14,7 +15,7 @@ def _tmp_event_thread(cli):
     t.join()
 
 
-def _login(role="Manager"):
+def _login(role=Role.Admin):
     cli = SepCli(Queue(), Queue())
     cli.logged_in_user = "user"
     cli.role = role
@@ -57,14 +58,14 @@ def test_login():
     inq = Queue()
     cli = SepCli(outq, inq)
 
-    inq.put(LoginResultMessage(True, "Manager", "validUser"))
+    inq.put(LoginResultMessage(True, Role.Admin, "validUser"))
     inq.put(StopMessage())
 
     _tmp_event_thread(cli)
 
     assert cli.logged_in_user == "validUser"
-    assert cli.role == "Manager"
-    assert "validUser" in cli.prompt and "Manager" in cli.prompt
+    assert cli.role == Role.Admin
+    assert "validUser" in cli.prompt and "Admin" in cli.prompt
 
 
 def test_logout():
@@ -72,7 +73,7 @@ def test_logout():
     inq = Queue()
     cli = SepCli(outq, inq)
 
-    inq.put(LoginResultMessage(False, "Manager", "user"))
+    inq.put(LoginResultMessage(False, Role.Admin, "user"))
     inq.put(StopMessage())
 
     _tmp_event_thread(cli)
@@ -92,7 +93,7 @@ def test_new_event_request(monkeypatch):
 
     # valid user
     cli.logged_in_user = "user"
-    cli.role = "Manager"
+    cli.role = Role.Admin
 
     _add_event(monkeypatch, cli)
     assert len(cli.requests) == 1

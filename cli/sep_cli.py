@@ -27,6 +27,7 @@ from message.message import (
 from threading import Thread
 from event.Request import EventRequest  # ✅ import Request object
 from event.models import Event, Task
+from hr.crew_request import Role
 
 
 class SepCli(Cmd):
@@ -56,6 +57,8 @@ class SepCli(Cmd):
             "save",
             "set",
             "settable",
+            "eof",
+            "exit",
         ]
         self.hidden_commands.extend(self.disabled_cmds)
 
@@ -296,13 +299,66 @@ class SepCli(Cmd):
                 "viewRequest",
                 "listRequests",
                 "listPendingApprovals",
+                "addTask",
+                "approveTask",
+                "commentTask",
+                "approve",
+                "updateTaskBudget",
+                "selectEvent",
+                "showTask",
+                "viewRequest",
             ]
             return
 
-        if self.role != "user":
-            self.hidden_commands = []  # admin sees everything
-        elif self.role == "Manager":
-            self.hidden_commands = ["approveEvent"]  # example restriction
+        # Role-based command visibility using Role enum
+        if self.role == Role.Admin:
+            self.hidden_commands = []  # Admin sees everything
+        elif self.role == Role.CSR:
+            self.hidden_commands = [
+                "selectEvent",
+                "addTask",
+                "approve",
+                "listPendingApprovals",
+                "approveTask",
+                "commentTask",
+                "showTask",
+                "viewRequest",
+                "updateTaskBudget",
+            ]  # CSR has access to few commands
+        elif self.role == Role.Fin:
+            self.hidden_commands = [
+                "newEvent",
+                "addTask",
+            ]  # Financial Manager has access to most commands except adding new events/tasks
+        elif self.role == Role.HR:
+            self.hidden_commands = [
+                "listPendingApprovals",
+                "approve",
+                "approveTask",
+                "commentTask",
+                "addTask",
+                "newEvent",
+                "selectEvent",
+                "showTask",
+                "updateTaskBudget",
+                "viewRequest",
+                "selectEvent",
+                "listRequests",
+            ]  # HR has almost no access in the current iteration
+        elif self.role == Role.PSR:
+            self.hidden_commands = [
+                "listPendingApprovals",
+                "newEvent",
+                "approve",
+                "listRequests",
+            ]  # PSR can't approve or manage events
+        elif self.role == Role.SSR:
+            self.hidden_commands = [
+                "listPendingApprovals",
+                "newEvent",
+                "approve",
+                "listRequests",
+            ]  # SSR can't approve or manage events
         else:
             self.hidden_commands = ["listPendingApprovals"]
         self.hidden_commands.extend(self.disabled_cmds)
