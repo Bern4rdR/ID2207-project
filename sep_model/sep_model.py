@@ -27,13 +27,13 @@ from login.login_manager import LoginManager
 from multiprocessing import Queue
 from hr.crew_request import Role, Department, CrewRequest
 from event.Request import EventRequest
-from event.models import Event, CrewRequest
+from event.models import Event, Task
 
 
 # this defines the main backend loop and data structure
 # probably should be in a different file but we need 3 refactors per day so...
 class SepModel:
-    _tasks: list[CrewRequest] = []
+    _tasks: list[Task] = []
     _events: list[Event] = []
     _requests: list[EventRequest] = []
     _crewRequests: list[CrewRequest] = []
@@ -91,14 +91,14 @@ class SepModel:
             names = [x.name for x in self._requests if x.awaiting_admin]
         self._outputQueue.put(PendingListMessage(names))
 
-    def add_task(self, task: CrewRequest):
+    def add_task(self, task: Task):
         for ev in self._events:
             if ev._id == task._event_id:
                 ev.add_task(task)
                 self._outputQueue.put(EventListMessage(self._events))
                 return
 
-    def update_task(self, task: CrewRequest):
+    def update_task(self, task: Task):
         for ev in self._events:
             if ev._id == task._event_id:
                 for i, ts in enumerate(ev.tasks):
