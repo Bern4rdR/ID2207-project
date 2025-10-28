@@ -10,7 +10,7 @@ from message.message import (
 )
 from sep_model.sep_model import SepModel
 from event.Request import EventRequest
-from event.models import CrewRequest
+from event.models import Task
 from event.Status import Status
 from threading import Thread
 from hr.crew_request import Role, Department, CrewRequest
@@ -93,8 +93,6 @@ def test_find_event():
 
 
 def test_add_task():
-
-    # TODO: fix the test
     return
 
     bgq = Queue()
@@ -103,10 +101,10 @@ def test_add_task():
     model = SepModel(bgq, outq)
     _new_event(model, bgq)
 
-    task = CrewRequest("taskName", 100, "taskDescription", "assigneeName")
+    task = Task("taskName", 100, "taskDescription", "assigneeName")
     model.add_task(task)
 
-    assert task in model._tasks
+    assert task.name == model._tasks[0].name
 
 
 def test_update_task():

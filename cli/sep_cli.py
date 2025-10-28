@@ -30,7 +30,7 @@ from message.message import (
 )
 from threading import Thread
 from event.Request import EventRequest  # ✅ import Request object
-from event.models import Event, CrewRequest
+from event.models import Event, Task
 from hr.crew_request import CrewRequest, Department, Role
 
 
@@ -216,7 +216,7 @@ class SepCli(Cmd):
             self.perror("Budget must be a number.")
             return
 
-        nt = CrewRequest(t_name, t_budget, t_desc, t_assignee)
+        nt = Task(t_name, t_budget, t_desc, t_assignee)
         self.current_event.add_task(nt)
         self._outMsgQueue.put(NewTaskMessage(nt))  # ToDo add message here
         self.poutput(f"✅ Added task '{t_name}' to event '{self.current_event}'.")
@@ -233,7 +233,7 @@ class SepCli(Cmd):
         t_name = arg.strip()
         if not t_name:
             t_name = self.read_input("Task Name: ")
-        task: CrewRequest = None
+        task: Task = None
         for ts in self.current_event.tasks:
             if ts.name == t_name:
                 task = ts
@@ -262,7 +262,7 @@ class SepCli(Cmd):
         except ValueError:
             self.perror("New budget must be a number.")
             return
-        task: CrewRequest = None
+        task: Task = None
         for ts in self.current_event.tasks:
             if ts.name == t_name:
                 task = ts
@@ -284,7 +284,7 @@ class SepCli(Cmd):
         t_name = arg.strip()
         if not t_name:
             t_name = self.read_input("Task Name: ")
-        task: CrewRequest = None
+        task: Task = None
         for ts in self.current_event.tasks:
             if ts.name == t_name:
                 task = ts
@@ -445,7 +445,7 @@ class SepCli(Cmd):
         t_name = arg.strip()
         if not t_name:
             t_name = self.read_input("Task Name: ")
-        task: CrewRequest = None
+        task: Task = None
         for ts in self.current_event.tasks:
             if ts.name == t_name:
                 task = ts
