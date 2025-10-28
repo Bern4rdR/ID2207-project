@@ -10,7 +10,7 @@ class Event:
         self._request = None
         self._id = uuid4()
 
-    def add_task(self, task: "Task"):
+    def add_task(self, task: "CrewRequest"):
         self._tasks.append(task) # might be data duplication
         task._event_id = self._id
     @property
@@ -21,7 +21,7 @@ class Event:
         self._request = request
 
 
-class Task:
+class CrewRequest:
     def __init__(self, name: str, budget: float = 0, description: str = "", assignee: str = None):
         self.name = name
         self.budget = budget

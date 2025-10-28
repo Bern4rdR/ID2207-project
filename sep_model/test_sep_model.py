@@ -5,11 +5,12 @@ from message.message import (
     ViewAllRequestMessage,
     ApproveRequestMessage,
     CrewRequestMessage,
+    CrewRequestUpdateMessage,
     StopMessage,
 )
 from sep_model.sep_model import SepModel
 from event.Request import EventRequest
-from event.models import Task
+from event.models import CrewRequest
 from event.Status import Status
 from threading import Thread
 from hr.crew_request import Role, Department, CrewRequest
@@ -102,7 +103,7 @@ def test_add_task():
     model = SepModel(bgq, outq)
     _new_event(model, bgq)
 
-    task = Task("taskName", 100, "taskDescription", "assigneeName")
+    task = CrewRequest("taskName", 100, "taskDescription", "assigneeName")
     model.add_task(task)
 
     assert task in model._tasks

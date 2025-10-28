@@ -24,10 +24,12 @@ from message.message import (
     PendingListMessage,
     NewTaskMessage,
     CrewRequestMessage,
+    CrewRequestListMessage,
+    CrewRequestUpdateMessage,
 )
 from threading import Thread
 from event.Request import EventRequest  # ✅ import Request object
-from event.models import Event, Task
+from event.models import Event, CrewRequest
 from hr.crew_request import CrewRequest, Department, Role
 
 
@@ -162,6 +164,7 @@ class SepCli(Cmd):
         self._outMsgQueue.put(FindWaitingRequestMessage(self.role))
 
     def do_approve(self, arg):
+        """Set an event as approved. Usage: approve <event_name>"""
         e_name = arg
         if not e_name or e_name == "":
             self.poutput("Require event name to approve")
@@ -210,7 +213,7 @@ class SepCli(Cmd):
             self.perror("Budget must be a number.")
             return
 
-        nt = Task(t_name, t_budget, t_desc, t_assignee)
+        nt = CrewRequest(t_name, t_budget, t_desc, t_assignee)
         self.current_event.add_task(nt)
         self._outMsgQueue.put(NewTaskMessage(nt))  # ToDo add message here
         self.poutput(f"✅ Added task '{t_name}' to event '{self.current_event}'.")
@@ -227,7 +230,7 @@ class SepCli(Cmd):
         t_name = arg.strip()
         if not t_name:
             t_name = self.read_input("Task Name: ")
-        task: Task = None
+        task: CrewRequest = None
         for ts in self.current_event.tasks:
             if ts.name == t_name:
                 task = ts
@@ -256,7 +259,7 @@ class SepCli(Cmd):
         except ValueError:
             self.perror("New budget must be a number.")
             return
-        task: Task = None
+        task: CrewRequest = None
         for ts in self.current_event.tasks:
             if ts.name == t_name:
                 task = ts
@@ -278,7 +281,7 @@ class SepCli(Cmd):
         t_name = arg.strip()
         if not t_name:
             t_name = self.read_input("Task Name: ")
-        task: Task = None
+        task: CrewRequest = None
         for ts in self.current_event.tasks:
             if ts.name == t_name:
                 task = ts
@@ -308,6 +311,11 @@ class SepCli(Cmd):
                 "selectEvent",
                 "showTask",
                 "viewRequest",
+                "crewRequest", 
+                "listCrewRequests", 
+                "commentCrewRequest", 
+                "showCrewRequest", 
+                "approveCrewRequest",
             ]
             return
 
@@ -325,11 +333,21 @@ class SepCli(Cmd):
                 "showTask",
                 "viewRequest",
                 "updateTaskBudget",
+                "crewRequest", 
+                "listCrewRequests", 
+                "commentCrewRequest", 
+                "showCrewRequest", 
+                "approveCrewRequest",
             ]  # CSR has access to few commands
         elif self.role == Role.Fin:
             self.hidden_commands = [
                 "newEvent",
                 "addTask",
+                "crewRequest", 
+                "listCrewRequests", 
+                "commentCrewRequest", 
+                "showCrewRequest", 
+                "approveCrewRequest",
             ]  # Financial Manager has access to most commands except adding new events/tasks
         elif self.role == Role.HR:
             self.hidden_commands = [
@@ -345,6 +363,7 @@ class SepCli(Cmd):
                 "viewRequest",
                 "selectEvent",
                 "listRequests",
+                "crewRequest", 
             ]  # HR has almost no access in the current iteration
         elif self.role == Role.PSR:
             self.hidden_commands = [
@@ -352,6 +371,7 @@ class SepCli(Cmd):
                 "newEvent",
                 "approve",
                 "listRequests",
+                "approveCrewRequest",
             ]  # PSR can't approve or manage events
         elif self.role == Role.SSR:
             self.hidden_commands = [
@@ -359,6 +379,7 @@ class SepCli(Cmd):
                 "newEvent",
                 "approve",
                 "listRequests",
+                "approveCrewRequest",
             ]  # SSR can't approve or manage events
         else:
             self.hidden_commands = ["listPendingApprovals"]
@@ -391,11 +412,15 @@ class SepCli(Cmd):
         self.poutput(f"Event: {msg.name} rejected!")
 
     def do_listEvents(self, arg):
+        """Show the names of all approved events"""
         self.poutput("Events:")
         for ev in self._events:
             self.poutput(ev.name)
 
     def do_showEvent(self, arg):
+
+        """Show the details of an event. Usage showEvent <event_name>"""
+
         e_name = arg
         try:
             event = [x for x in self._events if x.name == e_name].pop()
@@ -427,7 +452,7 @@ class SepCli(Cmd):
         t_name = arg.strip()
         if not t_name:
             t_name = self.read_input("Task Name: ")
-        task: Task = None
+        task: CrewRequest = None
         for ts in self.current_event.tasks:
             if ts.name == t_name:
                 task = ts
@@ -471,6 +496,106 @@ class SepCli(Cmd):
         self.poutput(f"Crew request created with name: {hr_req.name}\nRequest sent to HR!")
         self._outMsgQueue.put(CrewRequestMessage(hr_req))
 
+    def do_listCrewRequests(self, arg):
+        """List all the existing requests for outsourcing staff"""
+        self.poutput("Crew requests:")
+        for cr in self._crewRequests:
+            self.poutput(cr.name)
+    
+    def do_commentCrewRequest(self, arg):
+        """Add a comment to a Crew Request form. Usage: commentCrewRequest <crew_request_name>"""
+        
+        # Require login
+        if not self.require_login():
+            return
+
+        # Crew Request Argument (name)
+        name = arg.strip()
+        if not name:
+            name = self.read_input("Crew Request From Name: ")
+        
+        # Find Crew Rquest Form
+        cr: CrewRequest = None
+        for cr_i in self._crewRequests:
+            if cr_i.name == name:
+                cr = cr_i
+                break
+
+        if cr == None:
+            self.perror(f"Crew Request from {name} not found")
+            return
+        
+        # Create comment
+        comment = self.read_input("Comment: ")
+        cr.add_comment(comment)
+        self._outMsgQueue.put(CrewRequestUpdateMessage(cr))
+    
+    def do_showCrewRequest(self, arg):
+        """Show details of a Crew Request form. Usage: showCrewRequest <crew_request_name>"""
+        
+        # Require login
+        if not self.require_login():
+            return
+
+        # Crew Request Argument (name)
+        name = arg.strip()
+        if not name:
+            name = self.read_input("Crew Request From Name: ")
+        
+        # Find Crew Rquest Form
+        cr: CrewRequest = None
+        for cr_i in self._crewRequests:
+            if cr_i.name == name:
+                cr = cr_i
+                break
+
+        if cr == None:
+            self.perror(f"Crew Request from {name} not found")
+            return
+        
+        # Print details
+        self.poutput("\n===== CREW REQUEST FORM DETAILS =====")
+        self.poutput(f"Name:            {cr.name}")
+        #self.poutput(f"Department:      {cr.department}")          # TODO: Print the appropiate department name
+        self.poutput(f"Salary:          {cr.salary} SEK")
+        self.poutput(f"{'Full time job' if cr.fulltime else 'Part Time job'}")
+        self.poutput(f"{'Approved' if cr.approved else 'Not Approved'}")
+        self.poutput(
+            f"\nDescription:\n{cr.description if cr.description else '(no description)'}"
+        )
+        self.poutput("========= Comments =========\n")
+        for comment in cr.comments:
+            self.poutput(f"\t- {comment}")
+        self.poutput("============================\n")
+    
+    def do_approveCrewRequest(self, arg):
+        """Approve a request of outsourcing staff. Usage: approveCrewRequest <crew_request_name>"""
+        
+        # Require login
+        if not self.require_login():
+            return
+
+        # Crew Request Argument (name)
+        name = arg.strip()
+        if not name:
+            name = self.read_input("Crew Request From Name: ")
+        
+        # Find Crew Rquest Form
+        cr: CrewRequest = None
+        for cr_i in self._crewRequests:
+            if cr_i.name == name:
+                cr = cr_i
+                break
+
+        if cr == None:
+            self.perror(f"Crew Request from {name} not found")
+            return
+        
+        # Create comment
+        cr.approve()
+        self._outMsgQueue.put(CrewRequestUpdateMessage(cr))
+        self.poutput(f"✅ Approved {cr.name} crew request")
+
     # EVENT HANDLING (existing)
     def event_thread(self):
         while True:
@@ -501,6 +626,8 @@ class SepCli(Cmd):
                 self._tasks = msg.tasks
             elif isinstance(msg, PendingListMessage):
                 self.show_list(msg.names, "Pending Requests: ")
+            elif isinstance(msg, CrewRequestListMessage):
+                self._crewRequests = msg.crewRequests
 
     def run_ui(self):
         eventT = Thread(target=self.event_thread)
