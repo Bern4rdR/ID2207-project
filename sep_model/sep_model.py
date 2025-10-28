@@ -19,10 +19,11 @@ from message.message import (
     UpdateTaskMessage,
     NewTaskMessage,
     PendingListMessage,
+    CrewRequestMessage
 )
 from login.login_manager import LoginManager
 from multiprocessing import Queue
-from hr.crew_request import Role
+from hr.crew_request import Role, Department, CrewRequest
 from event.Request import EventRequest
 from event.models import Event, Task
 
@@ -33,6 +34,7 @@ class SepModel:
     _tasks: list[Task] = []
     _events: list[Event] = []
     _requests: list[EventRequest] = []
+    _crewRequests: list[CrewRequest] = []
 
     def __init__(self, bgMsgQueue: Queue, outputQueue: Queue):
         self._lm = LoginManager("./login/users.txt")
@@ -50,6 +52,8 @@ class SepModel:
             f.truncate(0)
             pickle.dump(self._requests, f)
 
+        # TODO: Safe crewRequests on exit
+
     def load_on_enter(self):
         # yes this is lazy
         try:
@@ -59,6 +63,9 @@ class SepModel:
                 self._events = pickle.load(f)
             with open("sep_requests.pkl", "rb") as f:
                 self._requests = pickle.load(f)
+
+            # TODO: Safe crewRequests on exit
+
         except:
             self._tasks = []
             self._requests = []
@@ -154,6 +161,8 @@ class SepModel:
                 elif type(next_msg) is NewTaskMessage:
                     self.add_task(next_msg.task)
                 # catch generic messages below, seeing those means there is an issue
+                elif type(next_msg) is CrewRequestMessage:
+                    self._crewRequests.append(next_msg.crewRequest)
                 elif type(next_msg) is Message:
                     print(f"Message received with Type Message {next_msg.name}")
                 else:

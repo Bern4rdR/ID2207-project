@@ -1,6 +1,7 @@
 from uuid import uuid4
 from event.Request import EventRequest
 from event.models import Event, Task
+from hr.crew_request import CrewRequest
 #literally stealing this from the senior engineers at my last job
 # part of the UI, don't need tests
 
@@ -107,3 +108,10 @@ class PendingListMessage(Message):
     names: list[str]
     def __init__(self, names):
         self.names = names
+
+class CrewRequestMessage(Message):
+    crewRequest: CrewRequest
+    name: str
+    def __init__(self, cr: CrewRequest):
+        self.crewRequest = cr
+        self.name = cr.name

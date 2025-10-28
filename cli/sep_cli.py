@@ -23,11 +23,12 @@ from message.message import (
     UpdateTaskMessage,
     PendingListMessage,
     NewTaskMessage,
+    CrewRequestMessage,
 )
 from threading import Thread
 from event.Request import EventRequest  # ✅ import Request object
 from event.models import Event, Task
-from hr.crew_request import Role
+from hr.crew_request import CrewRequest, Department, Role
 
 
 class SepCli(Cmd):
@@ -444,6 +445,31 @@ class SepCli(Cmd):
         self.poutput("=========== Comments ==========")
         for cm in task.comments:
             self.poutput(cm)
+
+    def do_crewRequest(self, arg):
+        """Create a new Request to HR for outsourcing new staff"""
+
+        # Require login
+        if not self.require_login():
+            return
+
+        # User input and validation
+        name = self.read_input("Crew request name: ")
+        department = Department.Production                  # TODO: This should be changed so is taken from the user as input or role
+        description = self.read_input("Description: ")
+        while True:
+            try:
+                salary = int(self.read_input("Salary: "))
+                break
+            except:
+                self.perror("Salary must be a number > 0 and integer")
+        fulltime = True                                     # TODO: This should be a user input
+
+        # Create the object
+        hr_req = CrewRequest(name=name, department=department, description=description, salary=salary, fulltime=fulltime)
+
+        self.poutput(f"Crew request created with name: {hr_req.name}\nRequest sent to HR!")
+        self._outMsgQueue.put(CrewRequestMessage(hr_req))
 
     # EVENT HANDLING (existing)
     def event_thread(self):
