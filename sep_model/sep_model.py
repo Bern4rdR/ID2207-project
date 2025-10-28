@@ -19,20 +19,24 @@ from message.message import (
     UpdateTaskMessage,
     NewTaskMessage,
     PendingListMessage,
+    CrewRequestMessage,
+    CrewRequestListMessage,
+    CrewRequestUpdateMessage,
 )
 from login.login_manager import LoginManager
 from multiprocessing import Queue
-from hr.crew_request import Role
+from hr.crew_request import Role, Department, CrewRequest
 from event.Request import EventRequest
-from event.models import Event, Task
+from event.models import Event, CrewRequest
 
 
 # this defines the main backend loop and data structure
 # probably should be in a different file but we need 3 refactors per day so...
 class SepModel:
-    _tasks: list[Task] = []
+    _tasks: list[CrewRequest] = []
     _events: list[Event] = []
     _requests: list[EventRequest] = []
+    _crewRequests: list[CrewRequest] = []
 
     def __init__(self, bgMsgQueue: Queue, outputQueue: Queue):
         self._lm = LoginManager("./login/users.txt")
@@ -50,6 +54,8 @@ class SepModel:
             f.truncate(0)
             pickle.dump(self._requests, f)
 
+        # TODO: Safe crewRequests on exit
+
     def load_on_enter(self):
         # yes this is lazy
         try:
@@ -59,6 +65,9 @@ class SepModel:
                 self._events = pickle.load(f)
             with open("sep_requests.pkl", "rb") as f:
                 self._requests = pickle.load(f)
+
+            # TODO: Safe crewRequests on exit
+
         except:
             self._tasks = []
             self._requests = []
@@ -82,20 +91,27 @@ class SepModel:
             names = [x.name for x in self._requests if x.awaiting_admin]
         self._outputQueue.put(PendingListMessage(names))
 
-    def add_task(self, task: Task):
+    def add_task(self, task: CrewRequest):
         for ev in self._events:
             if ev._id == task._event_id:
                 ev.add_task(task)
                 self._outputQueue.put(EventListMessage(self._events))
                 return
 
-    def update_task(self, task: Task):
+    def update_task(self, task: CrewRequest):
         for ev in self._events:
             if ev._id == task._event_id:
                 for i, ts in enumerate(ev.tasks):
                     if task.name == ts.name:
                         ev.tasks[i] = task
                 self._outputQueue.put(EventListMessage(self._events))
+                return
+    
+    def update_crew_request(self, crewRequest: CrewRequest):
+        for i, cr in enumerate(self._crewRequests):
+            if cr.name == crewRequest.name:
+                self._crewRequests[i] = crewRequest
+                self._outputQueue.put(CrewRequestListMessage(self._crewRequests))
                 return
 
     # do tasks to check model status
@@ -154,6 +170,11 @@ class SepModel:
                 elif type(next_msg) is NewTaskMessage:
                     self.add_task(next_msg.task)
                 # catch generic messages below, seeing those means there is an issue
+                elif type(next_msg) is CrewRequestMessage:
+                    self._crewRequests.append(next_msg.crewRequest)
+                    self._outputQueue.put(CrewRequestListMessage(self._crewRequests))
+                elif type(next_msg) is CrewRequestUpdateMessage:
+                    self.update_crew_request(next_msg.crewRequest)
                 elif type(next_msg) is Message:
                     print(f"Message received with Type Message {next_msg.name}")
                 else:

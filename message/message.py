@@ -1,6 +1,7 @@
 from uuid import uuid4
 from event.Request import EventRequest
-from event.models import Event, Task
+from event.models import Event, CrewRequest
+from hr.crew_request import CrewRequest
 #literally stealing this from the senior engineers at my last job
 # part of the UI, don't need tests
 
@@ -82,7 +83,7 @@ class EventListMessage(Message):
         self.events = events
 
 class TaskListMessage(Message):
-    tasks: list[Task]
+    tasks: list[CrewRequest]
     def __init__(self, tasks):
         self.tasks = tasks
 
@@ -93,7 +94,7 @@ class RequestListMessage(Message):
 
 # messages to support modifying and creating tasks
 class TaskMessage(Message):
-    task: Task
+    task: CrewRequest
     def __init__(self, task):
         self.task = task
 
@@ -107,3 +108,22 @@ class PendingListMessage(Message):
     names: list[str]
     def __init__(self, names):
         self.names = names
+
+class CrewRequestMessage(Message):
+    crewRequest: CrewRequest
+    name: str
+    def __init__(self, cr: CrewRequest):
+        self.crewRequest = cr
+        self.name = cr.name
+
+class CrewRequestUpdateMessage(Message):
+    crewRequest: CrewRequest
+    name: str
+    def __init__(self, cr: CrewRequest):
+        self.crewRequest = cr
+        self.name = cr.name
+
+class CrewRequestListMessage(Message):
+    crewRequests: list[CrewRequest]
+    def __init__(self, crewRequests):
+        self.crewRequests = crewRequests
