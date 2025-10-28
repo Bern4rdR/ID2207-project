@@ -106,7 +106,7 @@ class SepModel:
                         ev.tasks[i] = task
                 self._outputQueue.put(EventListMessage(self._events))
                 return
-    
+
     def update_crew_request(self, crewRequest: CrewRequest):
         for i, cr in enumerate(self._crewRequests):
             if cr.name == crewRequest.name:
@@ -148,6 +148,7 @@ class SepModel:
                     break
                 elif type(next_msg) is NewEventMessage:
                     self._requests.append(next_msg.request)
+                    self._outputQueue.put(RequestListMessage(self._requests))
                 elif type(next_msg) is ViewEventMessage:
                     ev = [x for x in self._requests if x.name == next_msg.name]
                     if len(ev):

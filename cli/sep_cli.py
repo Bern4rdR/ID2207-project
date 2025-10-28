@@ -45,7 +45,10 @@ class SepCli(Cmd):
         self._inMsgQueue = inMsgQueue
         self.logged_in_user = None
         self.role = None
-        self.requests = []  # ✅ local Request list
+        self._events = []
+        self._requests = []  # requests from model
+        self._tasks = []
+        self._crewRequests = []
 
         self.disabled_cmds = [
             "alias",
@@ -111,7 +114,23 @@ class SepCli(Cmd):
         if not self.require_login():
             return
 
-        e_name = self.read_input("Event Name: ")
+        # Ensure unique event name
+        while True:
+            e_name = self.read_input("Event Name: ")
+            # Check if name already exists in approved events
+            if any(ev.name == e_name for ev in self._events):
+                self.perror(
+                    f"❗ Event name '{e_name}' already exists in approved events. Please choose a different name."
+                )
+                continue
+            # Check if name already exists in pending requests
+            if any(req.name == e_name for req in self._requests):
+                self.perror(
+                    f"❗ Event name '{e_name}' already exists in pending requests. Please choose a different name."
+                )
+                continue
+            # Name is unique, break out of loop
+            break
         e_desc = self.read_input("Event Description: ")
         while True:
             try:
@@ -131,7 +150,6 @@ class SepCli(Cmd):
                 self.perror(f"Incorrect date format")
 
         req = EventRequest(name=e_name, type=e_desc, budget=e_budget, dates=[e_date])
-        self.requests.append(req)  # not sure if we need this but maybe
         self.poutput(f"✅ Request created: {req.id}")
         self._outMsgQueue.put(NewEventMessage(req))
         self.current_event = req
@@ -144,7 +162,7 @@ class SepCli(Cmd):
 
         query = self.read_input("Enter Request name > ").strip()
         match = None
-        for r in self.requests:
+        for r in self._requests:
             if r.name == query or r.type == query:
                 match = r
                 break
