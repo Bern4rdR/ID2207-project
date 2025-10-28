@@ -2,16 +2,33 @@ import cmd2
 from cmd2 import Cmd
 import getpass
 import datetime
+
 # this did get a bit ridiculous... oops
 from message.message import (
-    LoginMessage, LoginResultMessage, NewEventMessage, ViewEventMessage,
-    DecideEventMessage, StopMessage, ViewAllRequestMessage, RequestListMessage,
-    RequestApprovedMessage, RequestRejectedMessage, ApproveRequestMessage, FindWaitingRequestMessage,
-    RequestListMessage, EventListMessage, TaskListMessage, UpdateTaskMessage, PendingListMessage, NewTaskMessage
+    LoginMessage,
+    LoginResultMessage,
+    NewEventMessage,
+    ViewEventMessage,
+    DecideEventMessage,
+    StopMessage,
+    ViewAllRequestMessage,
+    RequestListMessage,
+    RequestApprovedMessage,
+    RequestRejectedMessage,
+    ApproveRequestMessage,
+    FindWaitingRequestMessage,
+    RequestListMessage,
+    EventListMessage,
+    TaskListMessage,
+    UpdateTaskMessage,
+    PendingListMessage,
+    NewTaskMessage,
 )
 from threading import Thread
 from event.Request import EventRequest  # ✅ import Request object
 from event.models import Event, Task
+from hr.crew_request import Role
+
 
 class SepCli(Cmd):
     intro = "Welcome to the SEP Management Application. Type 'login' to begin or '?' for options.\n"
@@ -27,8 +44,21 @@ class SepCli(Cmd):
         self.requests = []  # ✅ local Request list
 
         self.disabled_cmds = [
-            'alias', 'edit', 'run_script', 'macro', 'shell', 'run_pyscript',
-            'py', 'shortcuts', 'history', 'load', 'save', 'set', 'settable'
+            "alias",
+            "edit",
+            "run_script",
+            "macro",
+            "shell",
+            "run_pyscript",
+            "py",
+            "shortcuts",
+            "history",
+            "load",
+            "save",
+            "set",
+            "settable",
+            "eof",
+            "exit",
         ]
         self.hidden_commands.extend(self.disabled_cmds)
 
@@ -63,7 +93,9 @@ class SepCli(Cmd):
 
     def require_login(self):
         if not self.logged_in_user:
-            self.poutput("❗ You must be logged in to perform this command. Use 'login'.")
+            self.poutput(
+                "❗ You must be logged in to perform this command. Use 'login'."
+            )
             return False
         return True
 
@@ -93,7 +125,7 @@ class SepCli(Cmd):
                 self.perror(f"Incorrect date format")
 
         req = EventRequest(name=e_name, type=e_desc, budget=e_budget, dates=[e_date])
-        self.requests.append(req) # not sure if we need this but maybe
+        self.requests.append(req)  # not sure if we need this but maybe
         self.poutput(f"✅ Request created: {req.id}")
         self._outMsgQueue.put(NewEventMessage(req))
         self.current_event = req
@@ -106,7 +138,7 @@ class SepCli(Cmd):
 
         query = self.read_input("Enter Request name > ").strip()
         match = None
-        for r in self._requests:
+        for r in self.requests:
             if r.name == query or r.type == query:
                 match = r
                 break
@@ -119,7 +151,7 @@ class SepCli(Cmd):
     def do_listRequests(self, arg):
         """List all created Requests."""
         names = [x.name for x in self._requests]
-        self.show_list(names, "Request Names:")        
+        self.show_list(names, "Request Names:")
 
     # ✅ NEW: Stub - list requests to approve
     def do_listPendingApprovals(self, arg):
@@ -179,7 +211,7 @@ class SepCli(Cmd):
 
         nt = Task(t_name, t_budget, t_desc, t_assignee)
         self.current_event.add_task(nt)
-        self._outMsgQueue.put(NewTaskMessage(nt)) # ToDo add message here
+        self._outMsgQueue.put(NewTaskMessage(nt))  # ToDo add message here
         self.poutput(f"✅ Added task '{t_name}' to event '{self.current_event}'.")
 
     # lots of repeated code in these three
@@ -204,7 +236,9 @@ class SepCli(Cmd):
             return
         comment = self.read_input("Comment: ")
         task.add_budget_comment(comment)
-        self._outMsgQueue.put(UpdateTaskMessage(task)) # Todo: task comment message with this task
+        self._outMsgQueue.put(
+            UpdateTaskMessage(task)
+        )  # Todo: task comment message with this task
 
     def do_updateTaskBudget(self, arg):
         """Update a task's budget. Usage: updateTaskBudget <task_name> <new_value>"""
@@ -230,7 +264,7 @@ class SepCli(Cmd):
             self.perror(f"Task {t_name} not found")
             return
         task.budget = new_val
-        self._outMsgQueue.put(UpdateTaskMessage(task)) # ToDo : add message here
+        self._outMsgQueue.put(UpdateTaskMessage(task))  # ToDo : add message here
 
     def do_approveTask(self, arg):
         """Approve a task. Usage: approveTask <task_name>"""
@@ -252,8 +286,7 @@ class SepCli(Cmd):
             self.perror(f"Task {t_name} not found")
             return
         task.approve()
-        self._outMsgQueue.put(UpdateTaskMessage(task)) # add message here
-
+        self._outMsgQueue.put(UpdateTaskMessage(task))  # add message here
 
     """ These are for display purposes and are used by the event loop mostly"""
 
@@ -261,15 +294,73 @@ class SepCli(Cmd):
     def update_available_commands(self):
         """Enable/disable commands based on role."""
         if not self.role:
-            self.hidden_commands = ['newEvent', 'viewRequest', 'listRequests', 'listPendingApprovals']
+            self.hidden_commands = [
+                "newEvent",
+                "viewRequest",
+                "listRequests",
+                "listPendingApprovals",
+                "addTask",
+                "approveTask",
+                "commentTask",
+                "approve",
+                "updateTaskBudget",
+                "selectEvent",
+                "showTask",
+                "viewRequest",
+            ]
             return
 
-        if self.role != "user":
-            self.hidden_commands = []  # admin sees everything
-        elif self.role == "Manager":
-            self.hidden_commands = ['approveEvent']  # example restriction
+        # Role-based command visibility using Role enum
+        if self.role == Role.Admin:
+            self.hidden_commands = []  # Admin sees everything
+        elif self.role == Role.CSR:
+            self.hidden_commands = [
+                "selectEvent",
+                "addTask",
+                "approve",
+                "listPendingApprovals",
+                "approveTask",
+                "commentTask",
+                "showTask",
+                "viewRequest",
+                "updateTaskBudget",
+            ]  # CSR has access to few commands
+        elif self.role == Role.Fin:
+            self.hidden_commands = [
+                "newEvent",
+                "addTask",
+            ]  # Financial Manager has access to most commands except adding new events/tasks
+        elif self.role == Role.HR:
+            self.hidden_commands = [
+                "listPendingApprovals",
+                "approve",
+                "approveTask",
+                "commentTask",
+                "addTask",
+                "newEvent",
+                "selectEvent",
+                "showTask",
+                "updateTaskBudget",
+                "viewRequest",
+                "selectEvent",
+                "listRequests",
+            ]  # HR has almost no access in the current iteration
+        elif self.role == Role.PSR:
+            self.hidden_commands = [
+                "listPendingApprovals",
+                "newEvent",
+                "approve",
+                "listRequests",
+            ]  # PSR can't approve or manage events
+        elif self.role == Role.SSR:
+            self.hidden_commands = [
+                "listPendingApprovals",
+                "newEvent",
+                "approve",
+                "listRequests",
+            ]  # SSR can't approve or manage events
         else:
-            self.hidden_commands = ['listPendingApprovals']
+            self.hidden_commands = ["listPendingApprovals"]
         self.hidden_commands.extend(self.disabled_cmds)
 
     def show_event_request(self, event):
@@ -279,7 +370,9 @@ class SepCli(Cmd):
         self.poutput("\n===== EVENT DETAILS =====")
         self.poutput(f"Name:        {event.name}")
         self.poutput(f"Budget:      {event.budget}")
-        self.poutput(f"Description:\n{event.type if event.type else '(no description)'}")
+        self.poutput(
+            f"Description:\n{event.type if event.type else '(no description)'}"
+        )
         # don't have these in the event yet - should we add?
         # approved_by_display = ", ".join(event.ApprovedBy) if event.ApprovedBy else "(nobody yet)"
         # self.poutput(f"Approved By: {approved_by_display}")
@@ -303,21 +396,25 @@ class SepCli(Cmd):
 
     def do_showEvent(self, arg):
         e_name = arg
-        try: 
+        try:
             event = [x for x in self._events if x.name == e_name].pop()
         except:
             self.perror("Event not found")
         self.poutput("\n===== EVENT DETAILS =====")
         self.poutput(f"Name:        {event.name}")
         self.poutput(f"Budget:      {event.budget}")
-        self.poutput(f"Description:\n{event.description if event.description else '(no description)'}")
+        self.poutput(
+            f"Description:\n{event.description if event.description else '(no description)'}"
+        )
         # don't have these in the event yet - should we add?
         # approved_by_display = ", ".join(event.ApprovedBy) if event.ApprovedBy else "(nobody yet)"
         # self.poutput(f"Approved By: {approved_by_display}")
         self.poutput("========= Tasks =========\n")
         for ts in event.tasks:
-            self.poutput(f"Task: {ts.name} :: Budget: {ts.budget} :: {"Approved" if ts.approved else "Not Approved"}")
- 
+            self.poutput(
+                f"Task: {ts.name} :: Budget: {ts.budget} :: {'Approved' if ts.approved else 'Not Approved'}"
+            )
+
     def do_showTask(self, arg):
         """Approve a task. Usage: approveTask <task_name>"""
         if not self.require_login():
@@ -340,13 +437,13 @@ class SepCli(Cmd):
         self.poutput("\n===== Task DETAILS =====")
         self.poutput(f"Name:        {task.name}")
         self.poutput(f"Budget:      {task.budget}")
-        self.poutput(f"Description:\n{task.description if task.description else '(no description)'}")
-        self.poutput(f"{"Approved" if task.approved else "Not Approved"}")
+        self.poutput(
+            f"Description:\n{task.description if task.description else '(no description)'}"
+        )
+        self.poutput(f"{'Approved' if task.approved else 'Not Approved'}")
         self.poutput("=========== Comments ==========")
         for cm in task.comments:
             self.poutput(cm)
-
-
 
     # EVENT HANDLING (existing)
     def event_thread(self):
@@ -378,7 +475,6 @@ class SepCli(Cmd):
                 self._tasks = msg.tasks
             elif isinstance(msg, PendingListMessage):
                 self.show_list(msg.names, "Pending Requests: ")
-            
 
     def run_ui(self):
         eventT = Thread(target=self.event_thread)
