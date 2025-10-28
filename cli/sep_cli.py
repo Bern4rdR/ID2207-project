@@ -1,3 +1,4 @@
+from multiprocessing import allow_connection_pickling
 import cmd2
 from cmd2 import Cmd
 import getpass
@@ -62,8 +63,10 @@ class SepCli(Cmd):
             "settable",
             "eof",
             "exit",
+            "_relative_run_script",
         ]
         self.hidden_commands.extend(self.disabled_cmds)
+        self.update_available_commands()
 
     # LOGIN
     def do_login(self, arg):
@@ -297,92 +300,83 @@ class SepCli(Cmd):
     # ROLE-BASED COMMAND CONTROL
     def update_available_commands(self):
         """Enable/disable commands based on role."""
-        if not self.role:
-            self.hidden_commands = [
-                "newEvent",
-                "viewRequest",
-                "listRequests",
-                "listPendingApprovals",
-                "addTask",
-                "approveTask",
-                "commentTask",
-                "approve",
-                "updateTaskBudget",
-                "selectEvent",
-                "showTask",
-                "viewRequest",
-                "crewRequest", 
-                "listCrewRequests", 
-                "commentCrewRequest", 
-                "showCrewRequest", 
-                "approveCrewRequest",
-            ]
-            return
+        all_commands = [
+            "newEvent",
+            "viewRequest",
+            "listRequests",
+            "listPendingApprovals",
+            "addTask",
+            "approveTask",
+            "commentTask",
+            "approve",
+            "updateTaskBudget",
+            "listEvents",
+            "selectEvent",
+            "showEvent",
+            "showTask",
+            "crewRequest",
+            "listCrewRequests",
+            "commentCrewRequest",
+            "showCrewRequest",
+            "approveCrewRequest",
+        ]
+        allowed_commands = []
 
         # Role-based command visibility using Role enum
         if self.role == Role.Admin:
-            self.hidden_commands = []  # Admin sees everything
+            allowed_commands = all_commands  # Admin sees everything
         elif self.role == Role.CSR:
-            self.hidden_commands = [
-                "selectEvent",
-                "addTask",
-                "approve",
-                "listPendingApprovals",
-                "approveTask",
-                "commentTask",
-                "showTask",
+            allowed_commands = [
+                "newEvent",
                 "viewRequest",
-                "updateTaskBudget",
-                "crewRequest", 
-                "listCrewRequests", 
-                "commentCrewRequest", 
-                "showCrewRequest", 
-                "approveCrewRequest",
-            ]  # CSR has access to few commands
+                "listRequests",
+                "listPendingApprovals",
+                "selectEvent",
+                "approve",
+                "listEvents",
+            ]
         elif self.role == Role.Fin:
-            self.hidden_commands = [
-                "newEvent",
-                "addTask",
-                "crewRequest", 
-                "listCrewRequests", 
-                "commentCrewRequest", 
-                "showCrewRequest", 
-                "approveCrewRequest",
-            ]  # Financial Manager has access to most commands except adding new events/tasks
-        elif self.role == Role.HR:
-            self.hidden_commands = [
+            allowed_commands = [
+                "viewRequest",
+                "listRequests",
                 "listPendingApprovals",
                 "approve",
+                "selectEvent",
+                "updateTaskBudget",
+                "showTask",
                 "approveTask",
                 "commentTask",
-                "addTask",
-                "newEvent",
+            ]
+        elif self.role == Role.HR:
+            allowed_commands = [
+                "listEvents",
                 "selectEvent",
-                "showTask",
-                "updateTaskBudget",
-                "viewRequest",
-                "selectEvent",
-                "listRequests",
-                "crewRequest", 
-            ]  # HR has almost no access in the current iteration
+                "showEvent",
+                "listCrewRequests",
+                "comentCrewRequest",
+                "showCrewRequest",
+                "approveCrewRequest",
+            ]
         elif self.role == Role.PSR:
-            self.hidden_commands = [
-                "listPendingApprovals",
-                "newEvent",
-                "approve",
-                "listRequests",
-                "approveCrewRequest",
-            ]  # PSR can't approve or manage events
+            allowed_commands = [
+                "listEvents",
+                "showEvent",
+                "listCrewRequests",
+                "showCrewRequest",
+                "crewRequest",
+            ]
         elif self.role == Role.SSR:
-            self.hidden_commands = [
-                "listPendingApprovals",
-                "newEvent",
-                "approve",
-                "listRequests",
-                "approveCrewRequest",
-            ]  # SSR can't approve or manage events
-        else:
-            self.hidden_commands = ["listPendingApprovals"]
+            allowed_commands = [
+                "listEvents",
+                "showEvent",
+                "listCrewRequests",
+                "showCrewRequest",
+                "crewRequest",
+            ]
+
+        self.hidden_commands = [
+            comm for comm in all_commands if comm not in allowed_commands
+        ]
         self.hidden_commands.extend(self.disabled_cmds)
 
     def show_event_request(self, event):
@@ -418,7 +412,6 @@ class SepCli(Cmd):
             self.poutput(ev.name)
 
     def do_showEvent(self, arg):
-
         """Show the details of an event. Usage showEvent <event_name>"""
 
         e_name = arg
@@ -480,7 +473,9 @@ class SepCli(Cmd):
 
         # User input and validation
         name = self.read_input("Crew request name: ")
-        department = Department.Production                  # TODO: This should be changed so is taken from the user as input or role
+        department = (
+            Department.Production
+        )  # TODO: This should be changed so is taken from the user as input or role
         description = self.read_input("Description: ")
         while True:
             try:
@@ -488,12 +483,20 @@ class SepCli(Cmd):
                 break
             except:
                 self.perror("Salary must be a number > 0 and integer")
-        fulltime = True                                     # TODO: This should be a user input
+        fulltime = True  # TODO: This should be a user input
 
         # Create the object
-        hr_req = CrewRequest(name=name, department=department, description=description, salary=salary, fulltime=fulltime)
+        hr_req = CrewRequest(
+            name=name,
+            department=department,
+            description=description,
+            salary=salary,
+            fulltime=fulltime,
+        )
 
-        self.poutput(f"Crew request created with name: {hr_req.name}\nRequest sent to HR!")
+        self.poutput(
+            f"Crew request created with name: {hr_req.name}\nRequest sent to HR!"
+        )
         self._outMsgQueue.put(CrewRequestMessage(hr_req))
 
     def do_listCrewRequests(self, arg):
@@ -501,10 +504,10 @@ class SepCli(Cmd):
         self.poutput("Crew requests:")
         for cr in self._crewRequests:
             self.poutput(cr.name)
-    
+
     def do_commentCrewRequest(self, arg):
         """Add a comment to a Crew Request form. Usage: commentCrewRequest <crew_request_name>"""
-        
+
         # Require login
         if not self.require_login():
             return
@@ -513,7 +516,7 @@ class SepCli(Cmd):
         name = arg.strip()
         if not name:
             name = self.read_input("Crew Request From Name: ")
-        
+
         # Find Crew Rquest Form
         cr: CrewRequest = None
         for cr_i in self._crewRequests:
@@ -524,15 +527,15 @@ class SepCli(Cmd):
         if cr == None:
             self.perror(f"Crew Request from {name} not found")
             return
-        
+
         # Create comment
         comment = self.read_input("Comment: ")
         cr.add_comment(comment)
         self._outMsgQueue.put(CrewRequestUpdateMessage(cr))
-    
+
     def do_showCrewRequest(self, arg):
         """Show details of a Crew Request form. Usage: showCrewRequest <crew_request_name>"""
-        
+
         # Require login
         if not self.require_login():
             return
@@ -541,7 +544,7 @@ class SepCli(Cmd):
         name = arg.strip()
         if not name:
             name = self.read_input("Crew Request From Name: ")
-        
+
         # Find Crew Rquest Form
         cr: CrewRequest = None
         for cr_i in self._crewRequests:
@@ -552,11 +555,11 @@ class SepCli(Cmd):
         if cr == None:
             self.perror(f"Crew Request from {name} not found")
             return
-        
+
         # Print details
         self.poutput("\n===== CREW REQUEST FORM DETAILS =====")
         self.poutput(f"Name:            {cr.name}")
-        #self.poutput(f"Department:      {cr.department}")          # TODO: Print the appropiate department name
+        # self.poutput(f"Department:      {cr.department}")          # TODO: Print the appropiate department name
         self.poutput(f"Salary:          {cr.salary} SEK")
         self.poutput(f"{'Full time job' if cr.fulltime else 'Part Time job'}")
         self.poutput(f"{'Approved' if cr.approved else 'Not Approved'}")
@@ -567,10 +570,10 @@ class SepCli(Cmd):
         for comment in cr.comments:
             self.poutput(f"\t- {comment}")
         self.poutput("============================\n")
-    
+
     def do_approveCrewRequest(self, arg):
         """Approve a request of outsourcing staff. Usage: approveCrewRequest <crew_request_name>"""
-        
+
         # Require login
         if not self.require_login():
             return
@@ -579,7 +582,7 @@ class SepCli(Cmd):
         name = arg.strip()
         if not name:
             name = self.read_input("Crew Request From Name: ")
-        
+
         # Find Crew Rquest Form
         cr: CrewRequest = None
         for cr_i in self._crewRequests:
@@ -590,7 +593,7 @@ class SepCli(Cmd):
         if cr == None:
             self.perror(f"Crew Request from {name} not found")
             return
-        
+
         # Create comment
         cr.approve()
         self._outMsgQueue.put(CrewRequestUpdateMessage(cr))
