@@ -215,6 +215,20 @@ class SepCli(Cmd):
         self.poutput(f"🎯 Active event set to '{event_name}'")
         self.prompt = self.prompt[:-3] + f" :: {event_name} > "
 
+    def do_deselectEvent(self, arg):
+        """Deselect the currently active event."""
+        if not self.require_login():
+            return
+        if not self.current_event:
+            self.perror("❗ No active event is currently selected.")
+            return
+        event_name = self.current_event.name
+        self.current_event = None
+        
+        if " :: " in self.prompt:
+            self.prompt = self.prompt.split(" :: ")[0] + " > "
+        self.poutput(f"✅ Deselected event '{event_name}'")
+
     def do_addTask(self, arg):
         """Add a task to the currently active event."""
         if not self.require_login():
@@ -330,6 +344,7 @@ class SepCli(Cmd):
             "updateTaskBudget",
             "listEvents",
             "selectEvent",
+            "deselectEvent",
             "showEvent",
             "showTask",
             "crewRequest",
@@ -350,6 +365,7 @@ class SepCli(Cmd):
                 "listRequests",
                 "listPendingApprovals",
                 "selectEvent",
+                "deselectEvent",
                 "approve",
                 "listEvents",
             ]
@@ -360,6 +376,7 @@ class SepCli(Cmd):
                 "listPendingApprovals",
                 "approve",
                 "selectEvent",
+                "deselectEvent",
                 "updateTaskBudget",
                 "showTask",
                 "approveTask",
@@ -369,6 +386,7 @@ class SepCli(Cmd):
             allowed_commands = [
                 "listEvents",
                 "selectEvent",
+                "deselectEvent",
                 "showEvent",
                 "listCrewRequests",
                 "comentCrewRequest",
